@@ -1,0 +1,275 @@
+= Merge Cycle Git Recipes =
+These recipes in the form of bash scripts have been developed over the last few releases.  Although we use Github as our official repository, we don't use all of their tools in our workflow.
+
+This page describes the process I (Jim Lieb) used during the V1.5 thru V2.1 cycles.
+I use the terms ''release'' and ''merge'' interchangibly below.  Either one represents a change in the public repository with new bits.  Merges usually refer to the weekly release of a merge of current work.
+A stable release refers to the next level where the ''master'' branch is updated with a supported version.
+
+== Code Reviews ==
+Code reviews have worked out to be a combination of using the Github web site and email responses.  Both seem to work fine.  However, we do not use the ''Pull Request'' interface on Github because it does not fit our workflow.
+Instead, people send requests to the mailing list.  The important thing is code review.  Whatever works to get that done is what I have accepted.
+
+== Preparing the Merge ==
+We have settled into a weekly cycle but every now and then we either do more than one merge per week or delay a merge for a few days to get some key changes settled down.
+For this descussion, we assume a weekly schedule starting on Thursday afternoon after the concall with a push done on Friday.
+
+All merges start with the previous merge.  With a few exceptions, I do not accept pull requests that are not rebased on the previous merge.  Not holding to this policy can introduce errors and make for a messy recovery.
+
+Pull requests are taken in no particular order with the exception of updates to the ''ntirpc'' sub-module which is always done last.  My personal preference is to take the biggest ones first.  This pushes any merge conflicts
+to the smaller, less volatile merges.
+
+;NOTE:
+: One thing to look out for in pull requests is the occasional ''libntirpc'' update from anyone other than the maintainer.  This comes about because the submitter did not do a ''git submodule update --init'' when they last rebased.
+
+The last code merge is reserved for the pull request from the ''ntirpc'' maintainer.  I do this last because none of the other pull requests have had this change available to them.
+If this merge was taken first, all of the rest would conflict with the submodule, a nasty source of errors.
+In addition, its being the last one makes it easy to find since it is right next to the tag.
+
+The very last commit is a change to <code>src/CMakeLists.txt</code>.  This commit has only two components.
+
+* The file is edited to reflect the name of the release.  See the documentation at the top of the file for how this is changed.
+
+* The commit message has one line, the version number of the release.  This commit also has the ''Signed-off-By'' of the release manager.
+
+The following is an example of the top commit for V2.1:
+
+<pre>
+commit 707eb147270d7877d4c010690b52d87c8a4f8091                                           
+Author: Jim Lieb <lieb@sea-troll.net>                                                     
+Date:   Wed Jun 25 15:22:52 2014 -0700                                                    
+                                                                                          
+    V2.1.0                                                                                
+                                                                                          
+    Signed-off-by: Jim Lieb <lieb@sea-troll.net>                                          
+                                                                                          
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt                                      
+index 82372b2..71df68b 100644                                                             
+--- a/src/CMakeLists.txt                                                                  
++++ b/src/CMakeLists.txt                                                                  
+@@ -22,12 +22,12 @@ set(GANESHA_MINOR_VERSION 1)                                          
+ # Patch level is always ".0" for mainline (master).  It is blank for development.        
+ # When starting a stable maintenance branch, this becomes ".N"                           
+ # where N is monotonically increasing starting at 1. Remember to include the "." !!      
+-set(GANESHA_PATCH_LEVEL )                                                                
++set(GANESHA_PATCH_LEVEL .0)                                                              
+                                                                                          
+ # Extra version is for naming development/RC.  It is blank in master/stable branches     
+ # so it can be available to end-users to name local variants/versions                    
+ # If used, it is always of the form "-whateveryouwant"                                   
+-set(GANESHA_EXTRA_VERSION -RC-final)                                                     
++set(GANESHA_EXTRA_VERSION )                                                              
+                                                                                          
+ set(GANESHA_VERSION ${GANESHA_MAJOR_VERSION}.${GANESHA_MINOR_VERSION}${GANESHA_PATCH_LEVE
+ set(GANESHA_BASE_VERSION ${GANESHA_MAJOR_VERSION}.${GANESHA_MINOR_VERSION}${GANESHA_PATCH
+</pre>
+
+As you can see, the one line commit message version number matches the edit of the file which moved the version from ''V2.1-RC-final'' to ''V2.1.0''.
+This one line also matches the tag described below.
+
+== Clean Build ==
+At this point, we have made all of the changes in the release.  Before we proceed with tagging, we do one last build and testing run.
+I use the following scripts for the build.  I can build all FSAL modules because I have installed all the necessary required libraries.
+How to install these is decribed elsewhere.
+
+;NOTE:
+: Don't forget to do a <code>git submodule update --init</code> before the build if this cycle includes an ''ntirpc'' update!
+
+<pre>
+$ cleanbuild -DUSE_ADMIN_TOOLS=ON
+</pre>
+
+The ''cleanbuild'' script turns on everything currently supported.
+
+<pre>
+#! /bin/bash
+
+# do a clean build in the ganesha build dir
+
+cd ~/git/nfs-ganesha
+if [ -d build ]
+then
+        rm -rf build
+fi
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Maintainer \
+      -DDEBUG_SYMS=ON -DBUILD_CONFIG=everything \
+      -DUSE_FSAL_PT=ON $@ \
+      ../src
+make
+make dist
+</pre>
+
+The script turns on extra bits for the build that are outside the definition of ''everything''.  I also turn on ''USE_ADMIN_TOOLS'' on the command line.
+This extra command line bit is a convenience for me for when I am just testing and don't really need to package the python based admin tools.  I also install this build for my final testing.
+
+This script also does a ''make dist'' in preparation for the next step which is to build the RPMs.  The V2.1 cycle made major improvements to the RPM packaging so I have added an RPM build to the merge.
+
+<pre>
+$ rpm_build
+</pre>
+
+This script assumes that I have done a ''cleanbuild'' which would have placed the requisite tarball in the build directory when it executed ''make dist''.  The ''rpm_build'' script turns on its own options.
+
+<pre>
+#! /bin/bash
+
+# do a clean build in the ganesha build dir
+
+cd ~/git/nfs-ganesha/build
+
+rpmbuild -ta nfs-ganesha-*-Source.tar.gz \
+--with gpfs  --with xfs --with gluster  --with zfs --with ceph \
+--with utils
+</pre>
+
+This step leaves the RPMs in the '''$HOME/rpmbuild/RPMS''' directory on a Fedora system.  All of its build products are also in that subdirectory leaving nothing additional in either the build or source directories.
+My own testing does not use the RPMs at this point.
+
+== Tagging the Release ==
+Tagging the release does not happen until after testing is complete.  There are times when even with the best of intentions, something breaks in final testing and further commits are required.
+I handle this as follows:
+
+* An interactive rebase is done to re-order the commits so the versioning commit of <code>src/CMakeLists.txt</code> is once again the top commit.
+
+* If there is a merge commit that includes the submodule update for ''ntirpc'', it is not moved.  Any commits between it and the top versioning commit are the fixes found and fixed in final testing.
+
+With the commits ordered in this way, the tag always references the commit that changes the version in <code>src/CMakeLists.txt</code>.  This is a signed tag so that anyone building and using a particular release has all
+of the assurances of correctness in one tagged commit.  The following example is what I used to tag ''V2.1.0''.
+
+<pre>
+$ tag_release V2.1.0
+</pre>
+
+The argument matches the one line in the top commit.  The '''bd0530f5''' is the fingerprint of my GnuPG key.
+
+<pre>
+#! /bin/bash
+git tag -a -u bd0530f5 $@
+</pre>
+
+The ''-a'' option creates an ''annotated'' tag.  We do this because this type of tag is an object in the repo rather than just a reference.
+This option will start the editor so I can add a comment.  The following general format is what I have used.
+
+<pre>
+V2.0 stable release
+
+Highlights:
+
+* Dynamic exports
+
+* Export management via DBus
+
+* Improved configuration file processing
+
+* managed GIDs
+
+Since RC-final,
+
+* Final scrub of configuration parameters
+
+   - remove unused (dead) parameters
+
+   - set sensible defaults
+
+* Fix last minute Coverity bug introduced by scrub
+
+* Add RPM packaging of python utils
+
+* Update Changelog to reflect work in V2.1 cycle
+</pre>
+
+The first line describes the release.  For development cycles I have re-phrased what is in this example.
+The rest is a summary gleaned from the commit comments.
+
+At this point, the branch is such that we can run:
+
+<pre>
+$ git show `git describe`
+</pre>
+
+Which displays the following.  I copy-paste the highlights portion in the announcement email below.
+
+<pre>
+tag V2.1.0
+Tagger: Jim Lieb <lieb@sea-troll.net>
+Date:   Thu Jun 26 09:30:42 2014 -0700
+
+V2.0 stable release
+
+Highlights:
+
+* Dynamic exports
+
+* Export management via DBus
+
+* Improved configuration file processing
+
+* managed GIDs
+
+Since RC-final,
+
+* Final scrub of configuration parameters
+
+   - remove unused (dead) parameters
+
+   - set sensible defaults
+
+* Fix last minute Coverity bug introduced by scrub
+
+* Add RPM packaging of python utils
+
+* Update Changelog to reflect work in V2.1 cycle
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iF4EABEIAAYFAlOsSzwACgkQebtSx70FMPVB7gD/f9kWYgkOa4kO3HgNsKT3ax6E
+ZXVAGw4mz8rpipgEplsA/1VM53pYLVsg4uMoBoDYX9cKcvo0vFslYadf6Ik+j9i8
+=oMfB
+-----END PGP SIGNATURE-----
+</pre>
+
+And get the output above followed by the commit message for the change to <code>src/CMakeList.txt</code>.  This is deliberate as I will show below.
+
+== Pushing the Release ==
+The release is now all packaged up.  All that is necessary it to push it out to the world.
+
+<pre>
+$ push_next V2.1.0
+</pre>
+
+This scripts does four pushes, one set to the project repository and the other to my private one.  The first in each set pushes my merge branch ''merge_next'' to ''next'' in the public repository.
+The second one pushes the tag itself.  My personal workflow uses a branch named ''merge_next'' for this work but any will do.
+
+<pre>
+#! /bin/bash
+
+git push nfs-ganesha merge_next:next; git push nfs-ganesha $1
+git push github merge_next:next; git push github $1
+</pre>
+
+I have stripped out the line that would also do a push to the company's internal git server.
+
+For a stable release, I do an additional sequence to push ''merge_next'' and the tag to ''master''.
+
+=== Release Tarballs ===
+Github supports release tarballs.  They are set up so that a particular release tarball is located at a well known URL.
+This is an important link because all Linux distributions use this URL linkage for their packaging.
+
+Release tarballs can be created at any time but I have only used it for stable releases and key (release candidate) development releases.
+Releasing a tarball is all done on the Github site itself.  There is a link to the tarballs from  the top repository page.
+The necessary buttons and forms on the site are only visible to logged in users with the necessary (owner) capabilities.
+
+Anyone can download a tarball from the site via either HTTP or FTP.  Github reports checksums to validate the download and I have only created tarballs of tagged releases.
+This validates a tarball all the way back to the repository where the signed tag validates the release itself.
+
+== Publishing the Good News ==
+The last task is to publish the release to the project list.  I have adopted a form for the email that has three parts.
+
+* A cut-and-paste of the ''Highlights'' section of  the tag annotation.
+
+* The output of a <code>git log --pretty=short</code> for all the commits from the previous tag to the new tag.
+
+* A summary and notes about that particular release.
+
+This email is sent to the list not only to notify the community that a new release is available but to also take advantage of the list's archiving capability to document in time the when and where of the project's progress.

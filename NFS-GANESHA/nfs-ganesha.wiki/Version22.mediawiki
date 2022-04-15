@@ -1,0 +1,23 @@
+= Version 2.2 Development and Schedule =
+This page captures the details of planning and designs for Version 2.2. We also list future versions here to capture the content for tasks that cannot make the V2.2 schedule or priorities.
+
+== Version 2.2 Tasks ==
+We plan to tag 2.2 in Aug 2014 as per IBM and RedHat product roadmap. After the tag, community
+branch will continue through 2.3 release. Given the short runway for 2.2, this release will be planned with modest goals.
+
+=== Delegations ===
+[https://github.com/nfs-ganesha/nfs-ganesha/wiki/NFSv4-Delegations NFSv4 Delegations]
+
+=== Dynamic Exports ===
+While we have covered lot of base in 2.1, we skipped exports/configuration update.
+We plan to get this feature in 2.2 time frame so that the exports can be updated dynamically
+in addition to adding and deleting them. Following page pools the thoughts and direction on
+how to modify configuration dynamically.
+
+[https://github.com/nfs-ganesha/nfs-ganesha/wiki/DynamicExports  DynamicExports page]
+
+=== Cluster DRC ===
+[https://github.com/nfs-ganesha/nfs-ganesha/wiki/Cluster-DRC  Cluster-DRC page]
+
+=== Statistics ===
+[https://github.com/nfs-ganesha/nfs-ganesha/wiki/Statistics  Statistics page]

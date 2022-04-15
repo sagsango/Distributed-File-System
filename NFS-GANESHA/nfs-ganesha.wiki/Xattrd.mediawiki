@@ -1,0 +1,50 @@
+
+== Using Extended Attributes ghost directory == 
+
+FSAL layer provides, via the FSAL_XAttr* functions, a way to manipulated extended attributes. These are namespace specific attributes, dependant of each FSAL.
+In the NFSv4 protocol, there is something called "named attributes": for a given NFS accessed object and a given file handle, the NFS4_OP_OPENATTR provides you with a special filehandle (named attribute file handle)to a directory. This directory contains one file per extended attributes related to the file. This directory won't be visible to the end user, only by the client in the kernel. The end use will use regular xattr command line interface.
+
+NFS-GANESHA will support named attributes, but since they are NFSv4 specific feature, it has a way to access then in NFSv3 as well. The choice that was made is to introduce a "xattr ghost directory" with "ghost files" that let the extended attributes be browsed in a pocfs-like way.
+
+An example will show you this feature much better.
+
+I have compiled a NFS-GANESHA with FSAL_POSIX.
+
+A ls command shows me this (this is a NFSv3 mount point)
+<pre>
+[root@itchy mnt]# ls -l
+total 20
+-rw-r--r-- 1 root root    0 Sep 19 12:26 file
+drwxr-xr-x 5 root root 4096 Aug  8 16:02 phil
+drwx------ 4 usr1 grp1 4096 Jul 25 10:40 usr1
+drwx------ 4 usr2 grp1 4096 Jul 25 10:40 usr2
+drwx------ 4 usr3 grp1 4096 Jul 29 13:25 usr3
+</pre>
+
+For a object named foo in the namespace there is a "ghost directory" name .xattr.d.foo which contain its named attributes. In my example, for the directory name "phil", I will use ghost directory ".xattr.d.phil"
+
+Let's try to "ls" on this ghost directory
+<pre>
+[root@itchy mnt]# ls -la .xattr.d.phil
+total 4
+drwxr-x--- 2 root root 512 Aug  8 16:02 .
+drwxr-x--- 2 root root 512 Aug  8 16:02 .
+-rw-r----- 2 root root 512 Aug  8 16:02 device_id
+-rw-r----- 2 root root 512 Aug  8 16:02 fsal_object_id
+-rw-r----- 2 root root 512 Aug  8 16:02 inode
+-rw-r----- 2 root root 512 Aug  8 16:02 path
+-rw-r----- 2 root root 512 Aug  8 16:02 timestamp
+-rw-r----- 2 root root 512 Aug  8 16:02 type
+</pre>
+
+I can see different files, each of them linked to a specific FSAL Xattr. I can read the content of these ghost files
+<pre>
+[root@itchy mnt]# cat .xattr.d.phil/fsal_object_id
+37051
+</pre>
+
+Note: these are no actual FS object, you won't find them when using the "find" utility.
+
+These feature may be disable, you will then need to add  --disable-xattr-directory to your "./configure"
+
+

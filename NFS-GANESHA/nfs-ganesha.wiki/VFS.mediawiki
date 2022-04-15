@@ -1,0 +1,19 @@
+The FSAL_VFS allows you to export VFS based filesystems with NFS-Ganesha. It relies on new system calls introduced in kernel 2.6.39. So, to use this feature, make sure you have a recent enough kernel and that "CONFIG_FHANDLE=y" is set in your .config file. If not, using the related system calls will result in error ENOSYS.
+
+
+== File System Support on Linux ==
+
+In theory, FSAL_VFS can export any file system the Linux Kernel NFS Server can export. One notable exception is NFS mounted file systems which are always problematic and better supported with PROXY_V3 and PROXY_V4. FSAL_VFS uses the name_to_handle_at and open_by_handle_at system calls that require running as root and are tricky to use inside a container since the container would need that privilege. These system calls allow NFS Ganesha to translate a lookup by name into a file handle, or to translate a file handle into an inode. The handle these calls generate is wrapped by at least a 5-byte Ganesha header that specifies the export ID and some other bits. Usually a file system ID is also appended to allow multiple file systems to be exported by the NFS Ganesha server (whether by a single export or multiple exports). These additional bits added on to the file handle may cause some issues. FSAL_VFS requires all handles to fit into the 64 byte limit for NFSv3. Because of this, for some file systems, the fsid_type (see [[File-Systems]]) must be changed to be smaller.
+
+The following file system types have been tested to some degree:
+
+* EXT4
+* XFS (there is also an XFS FSAL however, given a new enough kernel to support FSAL_VFS, there is no reason not to use FSAL_VFS instead of FSAL_XFS.
+* BTRFS (this can have large handles) with subvolume support in NFS Ganesha V4.0+ (again see [[File-Systems]])
+* CEPH (however FSAL_CEPH is a better way to export Ceph file systems)
+
+A recent issue has been raised with EFS which can generate handles larger than 64 bytes all by itself without NFS Ganesha expanding the handle so EFS exports are not currently supported.
+
+== FreeBSD Support ==
+
+FSAL_VFS is in theory usable with FreeBSD however, NFS Ganesha for FreeBSD is very much a work in progress.
