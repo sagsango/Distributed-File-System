@@ -1,0 +1,21 @@
+1. NFS Ganesha is in user space, unlike traditional NFS which uses Kernal space.
+2. Ganesha is heighly scalable, and easy to develop, trobuleshoot, esaly compatible
+  for many protocal like : SBM, gluster etc.
+3. NFS Ganesha is uses active-active server for high aviability.
+   means all the server will be on and if some server dies then its verual ip will be 
+   transfered to other server, and client will get their requests without any issues.
+4. We use heartbeat to check aviability of each node.
+5. stateless server.
+
+
+
+
+
+
+
+   Grace Period:
+    One of the node goes down, then all other nodes in cluser are send a dbus signal 
+  with the id of node which goes down, then all the requests comming to the died 
+  node will be redirected to other nodes, but to recover the state for the clinet,
+  means holding locks etc, It take some time. During this time no io is possble.
+  This is known as grace period. I which all the node in the cluser participate.
