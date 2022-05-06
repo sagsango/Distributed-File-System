@@ -1,0 +1,18 @@
+|
+|    $Id$
+|
+
+Set Wiresalmon$Dir <Obey$Dir>
+
+IconSprites <Wiresalmon$Dir>.!Sprites
+
+RMEnsure UtilityModule 3.50 Error Wiresalmon requires RISC OS 3.50 or later
+RMEnsure UtilityModule 3.70 RMEnsure CallASWI 0.02 RMLoad System:Modules.CallASWI
+RMEnsure UtilityModule 3.70 RMEnsure CallASWI 0.02 Error Wiresalmon requires CallASWI 0.02 or later
+RMEnsure SharedCLibrary 5.17 RMLoad System:Modules.CLib
+RMEnsure SharedCLibrary 5.34 Error Wiresalmon requires SharedCLibrary 5.34 or later
+
+RMEnsure Internet 5.00 Error Wiresalmon requires the Internet module 5.00 or later
+
+Wimpslot -min 640k -max 640k
+Run <Wiresalmon$Dir>.!RunImage

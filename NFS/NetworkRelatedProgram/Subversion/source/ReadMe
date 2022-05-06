@@ -1,0 +1,8 @@
+
+This directory includes patches to the Subversion source code needed
+for the RISC OS port.
+To compile it you will need a gccsdk cross compiler setup, and various
+libraries compiled. Suitable libraries may be checked out from
+http://svn.cp15.org/libraries
+Apply the changes.diff patch to the Subversion source tree, then run
+the riscos.configure script to configure it, then run make

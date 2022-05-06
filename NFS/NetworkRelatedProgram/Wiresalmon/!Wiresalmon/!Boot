@@ -1,0 +1,7 @@
+|
+|    $Id$
+|
+
+Set Wiresalmon$Dir <Obey$Dir>
+
+IconSprites <Wiresalmon$Dir>.!Sprites

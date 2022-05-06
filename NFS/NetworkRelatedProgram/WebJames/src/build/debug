@@ -1,0 +1,39 @@
+# Makefile for WebJames the web server
+#
+# $Id: debug,v 1.4 2003/01/02 00:15:10 ajw Exp $
+#
+# Settings for the debug build
+
+#Programs
+CC = cc
+GCC = gcc
+LINK = link
+LN_S = @echo ln -s
+RM = remove
+MEMCHECK =
+SQUEEZE = Settype $@ ff8
+SETTYPE = SetType $@ Obey
+
+#Libraries
+MEMCHECKLIB =
+STUBS = C:o.stubs
+OSLIB = OSLib:o.OSLib32
+OSLIBSUPPORT = OSLibSupport:o.OSLibSupport32
+REGEX = C:regex.libregex
+
+#Compiler flags
+THROWBACK = -throwback
+DEPEND = -depend !Depend
+WARNINGS = -strict -fah
+OPTIMISATION =
+DEBUG = -g
+INCLUDE = -IC: -IOSLib: -IC:regex
+GCCINCLUDE = -IOSLib: -IOSLibSupport:
+
+#Linker flags
+LINKDEBUG = -d
+
+#!Run file
+STDERR =
+TYPESTDERR =
+CLIB =

@@ -1,0 +1,58 @@
+hmail
+~~~~~
+
+hmail is a simple command line program to send email to an SMTP
+smarthost. It is intended mainly for use with other programs, such as
+PHP, that want something with an interface like sendmail on Unix.
+
+hmail is copyright © Alex Waugh 2005
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+
+Setting up
+----------
+Ensure the !hamil application is somewhere where it is seen before use.
+From the command line, run hmail once with details of the smtp server
+to use. This setting will be saved in your choices directory.
+*hmail --server smtp.example.com
+or, if the server uses a non-standard port:
+*hmail --server smtp.example.com:26
+
+
+Using
+-----
+hmail will read an email from stdin, and forward it on to the
+configured smtp server. The format of the mail should conform to RFC
+822, and include all relevant header lines, and all line should be CRLF
+terminated. hmail will search the input message for To: and From:
+headers to use.
+If there is any kind of error while sending, the error message will
+be sent to syslog, and the email will not have been sent. The email
+is not saved or retried, it is up to the caller to do so if needed.
+
+
+Using with PHP
+------------
+To use the mail() function in PHP, edit your php.ini file so that
+sendmail_path = hmail
+This may become the default in future PHP versions, and so may become
+unnecessary.
+
+
+Limitations
+-----------
+
+Sending an email to multiple recipients is not currently supported.

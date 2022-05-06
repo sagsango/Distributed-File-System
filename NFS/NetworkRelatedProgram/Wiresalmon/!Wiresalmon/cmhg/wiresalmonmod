@@ -1,0 +1,16 @@
+
+help-string:  Wiresalmon 1.00 © Alex Waugh 2007
+
+title-string: Wiresalmon
+
+initialisation-code: initialise
+
+finalisation-code: finalise
+
+swi-chunk-base-number: 0x58C80
+
+swi-decoding-table: Wiresalmon, Start, Stop
+
+swi-handler-code: swi
+
+generic-veneers: callevery/callevery_handler callback/callback_handler

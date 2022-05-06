@@ -1,0 +1,27 @@
+#! /bin/sh
+
+export ac_cv_prog_cc_g=no
+export lt_cv_prog_cc_can_build_shared=no
+export lt_cv_prog_cc_pic_works=no
+export db_cv_alignp_t=unsigned int
+export db_cv_mutex=no
+export db_cv_fcntl_f_setfd=no
+export db_cv_sprintf_count=yes
+export ac_cv_header_zlib_h=yes
+
+#FIXME
+PREFIX=/home/riscos/cross/local
+
+LIBS=-l$PREFIX/lib/librossh.a \
+CFLAGS=-mpoke-function-name \
+ro-config --prefix=$PREFIX \
+--with-apr=$PREFIX --with-apr-util=$PREFIX \
+--with-iconv=$PREFIX \
+--without-berkeley-db \
+--without-apxs \
+--with-expat \
+--with-ssl \
+--with-zlib=$PREFIX \
+--with-neon=$PREFIX \
+$* || exit 1
+

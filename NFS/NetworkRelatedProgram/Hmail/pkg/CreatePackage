@@ -1,0 +1,29 @@
+#!/usr/bin/perl -w
+#
+#  $Id: CreatePackage 34 2006-04-29 22:33:20Z ajw $
+#
+
+open(CHANGELOG, "<../!hmail/ChangeLog");
+$line = <CHANGELOG>;
+$line =~ /^v([\d\.]*) .*/;
+$version = $1;
+close CHANGELOG;
+
+open(OUT,">RiscPkg/Control");
+
+print OUT qq{Package: hmail
+Priority: Optional
+Section: Mail
+Maintainer: Alex Waugh <alex\@alexwaugh.com>
+Standards-Version: 0.1.0
+Version: $version
+Licence: Free
+Depends: UnixLib (>=4.0-3)
+Description: hmail is a simple command line program to send email to an SMTP
+ smarthost. It is intended mainly for use with other programs, such as
+ PHP, that want something with an interface like sendmail on Unix.
+};
+
+
+close OUT;
+

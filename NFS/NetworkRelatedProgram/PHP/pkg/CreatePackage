@@ -1,0 +1,96 @@
+#!/usr/bin/perl -w
+#
+#  $Id: CreatePackage 34 2006-04-29 22:33:20Z ajw $
+#
+
+open(CHANGELOG, "<../!WebJames/help/history,faf");
+while (<CHANGELOG>) {
+  if (/(\d\.\d\d) \(/) {
+    $versionwj = $1;
+    last;
+  }
+}
+close CHANGELOG;
+
+open(CHANGELOG, "<../!PHP/ChangeLog");
+$line = <CHANGELOG>;
+$line =~ /^v([\d\.]*) .*/;
+$versionphp = $1;
+close CHANGELOG;
+
+open(OUT,">RiscPkg/Control");
+
+if ($ARGV[0] eq "webjames") {
+
+print OUT qq{Package: WebJames
+Priority: Optional
+Section: Web
+Maintainer: Alex Waugh <alex\@alexwaugh.com>
+Standards-Version: 0.1.0
+Version: $versionwj
+Licence: Free
+Description: An HTTP server.
+Conflicts: PHP-WebJames
+};
+
+} elsif ($ARGV[0] eq "php-webjames") {
+
+print OUT qq{Package: PHP-WebJames
+Priority: Optional
+Section: Web
+Maintainer: Alex Waugh <alex\@alexwaugh.com>
+Standards-Version: 0.1.0
+Version: $versionphp
+Licence: Free
+Description: The WebJames HTTP server with build in PHP interpreter.
+Depends: UnixLib (>=4.0-3)
+Recommends: PHP-Doc
+Suggests: hmail
+Conflicts: WebJames
+};
+
+} elsif ($ARGV[0] eq "php-cgi") {
+
+print OUT qq{Package: PHP-CGI
+Priority: Optional
+Section: Web
+Maintainer: Alex Waugh <alex\@alexwaugh.com>
+Standards-Version: 0.1.0
+Version: $versionphp
+Licence: Free
+Description: The CGI version of the PHP programming language interpreter.
+Depends: UnixLib (>=4.0-3)
+Recommends: PHP-Doc
+Suggests: hmail
+Conflicts: PHP-WebJames
+};
+
+} elsif ($ARGV[0] eq "site") {
+
+print OUT qq{Package: WebJames-Example-Site
+Priority: Optional
+Section: Web
+Maintainer: Alex Waugh <alex\@alexwaugh.com>
+Standards-Version: 0.1.0
+Version: 1.00
+Licence: Free
+Description: Some example pages and scripts for WebJames.
+Recommends: WebJames
+};
+
+} elsif ($ARGV[0] eq "doc") {
+
+print OUT qq{Package: PHP-Doc
+Priority: Optional
+Section: Manuals
+Maintainer: Alex Waugh <alex\@alexwaugh.com>
+Standards-Version: 0.1.0
+Version: 20060906
+Licence: Free
+Description: Documentation for PHP in StrongHelp format.
+};
+
+}
+
+close OUT;
+

@@ -1,0 +1,59 @@
+HTML2SH and StrongCopy
+~~~~~~~~~~~~~~~~~~~~~~
+HTML2SH is a perl script to convert HTML pages to StrongHelp format.
+StrongCopy copies a directory of files into a StrongHelp file.
+Both are command line programs which will run either on RISC OS
+or GNU/Linux, and possibly other operating systems
+(although currently only on little-endian processors).
+
+What it can convert:
+Simple tags like <B>,<I>,<EM>,<PRE>,<H1> etc.
+Links between pages and within that same page
+Lists
+Alignment
+Named characters
+Images (Currently it just uses the ALT text)
+
+What it can't do:
+Frames
+Tables
+Image maps
+Forms
+Broken HTML
+Javascript
+The cooking
+The washing up
+Any other fancy stuff
+
+Sometimes it does not get the layout perfect, but it is usually readable.
+It is most suitable for converting technical manuals and documentation,
+for example the PHP manual.
+
+
+Using it
+~~~~~~~~
+Set the Current Selected Directory to the directory containing the HTML
+*HTML2SH [filetoconvert]
+It will then convert the specified file, and any files linked to from the file.
+(if the filename is ommitted then it defaults to index.html)
+The files will be save in a directory named temp which is created in the
+currently selected directory.
+To create the StrongHelp manual from these converted files,
+*strongcopy [-v] [-o outputfile] [inputdir]
+-v (verbose) prints the name of each file as it is added
+output file is the name of the output stronghelp manual
+(if ommited, it defaults to Manual)
+inputdir is the directory containing the files to be copied
+(if ommitted, it defaults to the current directory)
+You should ensure that the wimpslot is set larger than the largest file to convert.
+
+
+
+HTML2SH and StrongCopy are distributed under the GNU General Public License.
+
+Any updates should be available from http://www.alexwaugh.com/
+
+Any comments or bug reports are welcome
+
+
+Alex Waugh  alex@alexwaugh.com

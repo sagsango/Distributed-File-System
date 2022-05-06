@@ -1,0 +1,20 @@
+v1.05 2-Nov-05
+Fixed checking of StrongHelp version, as this was failing on recent versions of Perl.
+
+v1.04 11-Oct-04
+Strips out newlines inside links, as these cause StrongHelp problems.
+
+v1.03 18-Dec-02
+Recompiled StrongCopy for 32bit compatibility.
+
+v1.02 15-Jul-02
+Various improvements to the formatting of the output, added by Matthew Phillips.
+Added StrongCopy, so the entire process can be done on a Linux box.
+
+v1.01 27-Dec-00
+Added support for some &amp;#60; type characters as used in the PHP manual.
+Now escapes \ and { if present in the HTML.
+
+v1.00 6-Feb-00
+First release
+

@@ -1,0 +1,71 @@
+Wiresalmon
+~~~~~~~~~~
+
+Wiresalmon is a network packet sniffer, which can be used to capture
+packets transmitted and recieved on a network. Captured packets are
+saved to a file in libpcap format, which can be read by protocol
+analysers on other platforms, such as Wireshark.
+Wiresalmon does not itself provide any means of viewing the captured
+data.
+
+
+Wiresalmon is copyright © Alex Waugh 2007
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+
+Using
+-----
+
+Doubleclick !Wiresalmon to load the application and module. Click Select
+on the iconbar icon to open the capture control window.
+Drag the file icon to a directory, or enter a filename, to specify
+where the captured data should be saved. Note that you should not save
+directly to a network filesystem, because every time data is saved it
+would create more network traffic which would then be captured and saved
+creating yet more traffic.
+
+Click Select on the start capture button to start captuting packets.
+
+When you wish to stop capturing, click Select on the stop capture
+button.
+
+
+Compatibility
+-------------
+
+Wiresalmon should work with any network card that provides a standard
+DCI4 driver. It has been tested with EtherK on an Iyonix and EtherX on a
+RiscPC with a Simtec Net100 NIC.
+
+
+Limitations
+-----------
+
+When the Wiresalmon module is loaded or killed, it must reinitialise
+all the DCI4 drivers in order to insert or remove its hooks into the
+drivers. It is possible that some drivers may not cope very well with
+this, e.g. a ppp driver may drop its connection.
+
+Recieved packets are only captured if they are passed from the DCI4
+driver to a higher level protocol module. If no protocol module has
+registered an interest in the packet type, then Wiresalmon will not
+capture the packet. If the network hardware filters out packets then
+these packets will not be seen by Wiresalmon.
+
+
+Any future updates to Wiresalmon will be available from
+http://www.alexwaugh.com/
+

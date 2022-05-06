@@ -1,0 +1,90 @@
+#!/bin/sh
+#
+# $Id: buildrelease,v 1.9 2003/06/18 20:41:52 ajw Exp $
+#
+# usage: buildrelease --webjames=0.34 --php=2.04 --php-dir=../php4
+
+# Set defaults
+WJVERSION=test
+PHPVERSION=test
+PHPDIR=../php4
+
+# Get arguments
+for X in "$@"; do
+  case $X in
+    --webjames=*) WJVERSION=`echo "$X" | sed 's/[-_a-zA-Z0-9]*=//'`;;
+    --php=*) PHPVERSION=`echo "$X" | sed 's/[-_a-zA-Z0-9]*=//'`;;
+    --php-dir=*) PHPDIR=`echo "$X" | sed 's/[-_a-zA-Z0-9]*=//'`;;
+    *) echo usage: $0 [--webjames=x.xx --php=x.xx] [--php-dir=../php4]; exit 1;;
+  esac
+done
+
+if test $WJVERSION = test -a $PHPVERSION != test; then
+  echo Cannot set only PHP version
+  exit 1
+fi
+if test $PHPVERSION = test -a $WJVERSION != test; then
+  echo Cannot set only WebJames version
+  exit 1
+fi
+
+# Make sure everything is pristine
+if test -f Makefile; then
+  make cvsclean
+fi
+
+if test $WJVERSION != test; then
+  # Check that all version numbers are consistent
+  if test -z `grep "WEBJAMES_VERSION \"$WJVERSION\"" src/webjames.h | sed 'y/ /_/'`; then
+    echo 'Please update version number in webjames.h'
+    exit 1
+  fi
+#  if test -z `grep "Version $WJVERSION" \!WebJames/help/index.html,faf | sed 'y/ /_/'`; then
+#    echo 'Please update version number in !WebJames/help/index.html'
+#    exit 1
+#  fi
+  if test -z `grep "<i>$WJVERSION" \!WebJames/help/history,faf | sed 'y/ /_/'`; then
+     echo 'Please update version number in !WebJames/help/history'
+    exit 1
+  fi
+  if test -z `grep "RISC OS version $PHPVERSION" \!PHP/!Help,faf | sed 'y/ /_/'`; then
+    echo 'Please update version number in !PHP/!Help'
+    exit 1
+  fi
+  if test -z `grep "v$PHPVERSION" \!PHP/ChangeLog | sed 'y/ /_/'`; then
+    echo 'Please update version number in !PHP/ChangeLog'
+    exit 1
+  fi
+
+fi
+
+# Build the source zip
+zip -r9, webjames-source-$WJVERSION.zip * -x '*CVS*' '*.svn*' '*.cvsignore' '\!System*' 'scripts*' 'WJ-PHP*' || exit 1
+
+# Build the release zip
+./configure --lib-dir=$LIBDIR
+make
+zip -r9, webjames-$WJVERSION.zip \!WebJames Site Licences README_UPGRADING -x '*CVS*' '*.svn*' '*.cvsignore' || exit 1
+
+# Build the PHP cgi
+(cd $PHPDIR; ./riscos.configure) || exit 1
+(cd $PHPDIR; make) || exit 1
+cp $PHPDIR/sapi/cgi/php,ff8 !PHP/php,ff8 || exit 1
+zip -r9, php-$PHPVERSION.zip \!PHP Licences php.ini -x '*CVS*' '*.svn*' '*.cvsignore' || exit 1
+
+# Build WebJames/PHP
+./configure --enable-php --lib-dir=$LIBDIR || exit 1
+SRCDIR=`pwd`/src
+(cd $PHPDIR; ./riscos.configure --with-webjames=$SRCDIR --disable-pear --disable-cli) || exit 1
+(cd $PHPDIR; make) || exit 1
+# make install is likely to fail as it tries to install the cli sapi or pear
+(cd $PHPDIR; make install)
+make || exit 1
+zip -r9, webjames-$WJVERSION-php-$PHPVERSION.zip \!WebJames Site Licences php.ini README_UPGRADING -x '*CVS*' '*.svn*' '*.cvsignore' || exit 1
+
+if test $WJVERSION != test; then
+  echo Please tag:
+  echo svn cp http://svn.cp15.org/webjames/trunk http://svn.cp15.org/webjames/tags/v`echo $WJVERSION | sed 's/\.//'`_`echo $PHPVERSION | sed 's/\.//'`
+fi
+
+# Build example scripts

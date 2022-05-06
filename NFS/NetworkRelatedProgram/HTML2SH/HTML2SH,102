@@ -1,0 +1,486 @@
+#!/usr/bin/perl
+# HTML to StrongHelp Perl script
+# © Alex Waugh 1999
+#
+# $Id$
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+
+#Default file to use - can be overridden by command line argument
+$infile="index.html";
+
+#Temporary directory to use
+$tempdir="temp";
+
+#Do we include images or use the ALT text instead
+#Images do not currently work
+$images="no";
+
+$changefsi='<ChangeFSI$Dir>.ChangeFSI';
+$changefsiflags="28r -nomode";
+$spritename="p28r";
+
+#Only process files with the following file extensions or no extension as html files
+#You can add or remove extensions from the list
+@htmlextensions=(
+		".shtml",
+		".html",
+		".htm",
+);
+
+#Only process files with the following file extensions as images
+#You can add or remove extensions from the list
+@imageextensions=(
+		".jpeg",
+		".gif",
+);
+
+#Filenames to treat as default pages
+@renametoroot=(
+		"index.shtml",
+		"index.html",
+		"index.htm",
+		"index",
+		"manual.html",
+);
+
+#A list of tags and how to replace them
+#To stop a tag from being processed add a # character to the beggining of the appropriate line
+#Tags with a single * are processed further by the replace subroutine
+%options=(
+                "/td"           => " ",
+                "/th"           => " ",
+                "/tr"           => "\n",
+		"i"		=> "{/}",
+		"/i"		=> "{/}",
+		"b"		=> "{*}",
+		"/b"		=> "{*}",
+		"strong"	=> "{*}",
+		"/strong"	=> "{*}",
+		"em"		=> "{/}",
+		"/em"		=> "{/}",
+		"h1"		=> "\n\n{fh1}",
+		"h2"		=> "\n\n{fh2}",
+		"h3"		=> "\n\n{fh3}",
+		"h4"		=> "\n\n{fh4}",
+		"h5"		=> "\n\n{fh5}",
+		"h6"		=> "\n\n{fh6}",
+		"/h1"		=> "{f}\n",
+		"/h2"		=> "{f}\n",
+		"/h3"		=> "{f}\n",
+		"/h4"		=> "{f}\n",
+		"/h5"		=> "{f}\n",
+		"/h6"		=> "{f}\n",
+		"title"		=> "",
+		"/title"	=> "\n",
+		"br"		=> "\n",
+		"hr"		=> "{line}",
+		"ol"		=> "{indent +1}\n",
+		"/ol"		=> "{indent}",
+		"ul"		=> "{indent +1}\n",
+		"/ul"		=> "{indent}",
+		"dl"		=> "{indent +1}\n",
+		"/dl"		=> "{indent}",
+		"li"		=> "\n",
+		"dt"		=> "\n",
+		"\dt"		=> "\n",
+		"dd"		=> "\n",
+		"/dd"		=> "\n",
+		"pre"		=> "{fcode}",
+		"/pre"		=> "{f}",
+		"var"		=> "{fcode}",
+		"/var"		=> "{f}",
+		"tt"		=> "{fcode}",
+		"/tt"		=> "{f}",
+		"code"		=> "{fcode}",
+		"/code"		=> "{f}",
+		"cite"		=> "{fcite}",
+		"/cite"		=> "{fcite}",
+		"kbd"		=> "{fcode}",
+		"/kbd"		=> "{f}",
+		"dfn"		=> "{/}",
+		"/dfn"		=> "{/}",
+		"center"	=> "{align centre}",
+		"/center"	=> "\n{align}",
+		"img"		=> "*",
+		"a"		=> "*",
+		"/a"		=> "*",
+		"p"		=> "*",
+		"/p"		=> "*",
+		"div"		=> "\n",
+		"/div"		=> "\n",
+	);
+
+#A list of named characters and their replacements
+#To stop a character from being processed add a # character to the beginning of the appropriate line
+%chars=(
+		"&lt;"		=> "\\<",
+		"&gt;"		=> "\\>",
+		"&quot;"	=> "\"",
+		"&nbsp;"	=> " ",
+		"&AElig;"	=> "Æ",
+		"&Aacute;" 	=> "Á",
+		"&Acirc;"  	=> "Â",
+		"&Agrave;" 	=> "À",
+		"&Aring;"  	=> "Å",
+		"&Atilde;" 	=> "Ã",
+		"&Auml;"   	=> "Ä",
+		"&Ccedil;" 	=> "Ç",
+		"&Cedilla;"	=> "¸",
+		"&Eth;"    	=> "Ð",
+		"&Eacute;" 	=> "É",
+		"&Ecirc;"  	=> "Ê",
+		"&Egrave;" 	=> "È",
+		"&Euml;"   	=> "Ë",
+		"&Iacute;" 	=> "Í",
+		"&Icirc;"  	=> "Î",
+		"&Igrave;" 	=> "Ì",
+		"&Iuml;"   	=> "Ï",
+		"&Ntilde;" 	=> "Ñ",
+		"&Oacute;" 	=> "Ó",
+		"&Ocirc;"  	=> "Ô",
+		"&Ograve;" 	=> "Ò",
+		"&Oslash;" 	=> "Ø",
+		"&Otilde;" 	=> "Õ",
+		"&Ouml;"   	=> "Ö",
+		"&Thorn;"  	=> "Þ",
+		"&Uacute;" 	=> "Ú",
+		"&Ucirc;"  	=> "Û",
+		"&Ugrave;" 	=> "Ù",
+		"&Uuml;"   	=> "Ü",
+		"&Yacute;" 	=> "Ý",
+		"&aacute;" 	=> "á",
+		"&acute;"  	=> "´",
+		"&acirc;"  	=> "â",
+		"&aelig;"  	=> "æ",
+		"&agrave;" 	=> "à",
+		"&aring;"  	=> "å",
+		"&atilde;" 	=> "ã",
+		"&auml;"   	=> "ä",
+		"&brvbar;" 	=> "¦",
+		"&ccedil;" 	=> "ç",
+		"&cent;"   	=> "¢",
+		"&copy;"   	=> "©",
+		"&curren;" 	=> "¤",
+		"&degree;" 	=> "°",
+		"&die;"    	=> "¨",
+		"&divide;" 	=> "÷",
+		"&eacute;" 	=> "é",
+		"&ecirc;"  	=> "ê",
+		"&egrave;" 	=> "è",
+		"&eth;"    	=> "ð",
+		"&euml;"   	=> "ë",
+		"&frac14;" 	=> "¼",
+		"&frac12;" 	=> "½",
+		"&frac34;" 	=> "¾",
+		"&iacute;" 	=> "í",
+		"&icirc;"  	=> "î",
+		"&iexcl;"  	=> "¡",
+		"&igrave;" 	=> "ì",
+		"&iquest;" 	=> "¿",
+		"&iuml;"   	=> "ï",
+		"&laquo;"  	=> "«",
+		"&macron;" 	=> "¯",
+		"&mdash;"  	=> "˜",
+		"&ndash;"  	=> "™",
+		"&micro;"  	=> "µ",
+		"&middot;" 	=> "·",
+		"&not;"    	=> "¬",
+		"&ntilde;" 	=> "ñ",
+		"&oacute;" 	=> "ó",
+		"&ocirc;"  	=> "ô",
+		"&ograve;" 	=> "ò",
+		"&ordf;"   	=> "ª",
+		"&ordm;"   	=> "º",
+		"&oslash;" 	=> "ø",
+		"&otilde;" 	=> "õ",
+		"&ouml;"   	=> "ö",
+		"&para;"   	=> "¶",
+		"&plusmn;" 	=> "±",
+		"&pound;"  	=> "£",
+		"&raquo;"  	=> "»",
+		"&reg;"    	=> "®",
+		"&sect;"   	=> "§",
+		"&shy;"    	=> "­",
+		"&sup1;"   	=> "¹",
+		"&sup2;"   	=> "²",
+		"&sup3;"   	=> "³",
+		"&szlig;"  	=> "ß",
+		"&times;"  	=> "×",
+		"&trade;"  	=> "",
+		"&ugrave;" 	=> "ù",
+		"&uacute;" 	=> "ú",
+		"&ucirc;"  	=> "û",
+		"&uml;"    	=> "¨",
+		"&uuml;"   	=> "ü",
+		"&yacute;" 	=> "ý",
+		"&yen;"    	=> "¥",
+		"&thorn;"  	=> "þ",
+		"&yuml;"   	=> "ÿ",
+		"&ldquo;"  	=> "”",
+		"&rdquo;"  	=> "•",
+		"&lsquo;"  	=> "",
+		"&rsquo;"  	=> "‘",
+# Some numbered entities that occour in the PHP manual quite a lot
+		"&\#13;"        => "\n",
+		"&\#38;"        => "&",
+		"&\#60;"        => "\\<",
+		"&\#62;"        => "\\>",
+		"&\#8212;"      => "",
+	);
+
+#Munge Unixy filenames into a suitable form for RISC OS
+sub munge {
+	my ($filename)=$_[0];
+	$filename=~s/\.\./\^/g;
+	$filename=~s/^\.\///g;
+	$filename=~s/\// /g;
+	$filename=~s/\./\//g;
+	$filename=~s/\ /\./g;
+	return $filename;
+}
+
+#Replace a named character with its value
+sub getnamedchar {
+	my ($charname)=@_;
+	return $charname if not exists $chars{$charname};
+	return $chars{$charname};
+}
+
+#Replace a HTML tag with a suitable StrongHelp tag
+sub replace {
+	my ($wholetag,$tagtype,%attributes)=@_;
+	#Remove all unknown tags
+	return "" if not defined $options{$tagtype};
+	#Return replacement tag if a simple translation is possible
+	return $options{$tagtype} if $options{$tagtype} ne "*";
+	#More complex processing must be needed
+	if ($tagtype eq "a") {
+		$link="";
+		if (exists $attributes{"href"}) {
+			$link=$attributes{"href"};
+			#Check for external links
+			if ($link=~m/^(http:)|(https:)|(ftp:)|(mailto:)|(gopher:)|(news:)|(telnet:)|(finger:)/i) {
+				$link="=>#URL $link>";
+			#Check for in-document links
+			} elsif ($link=~m/^\#(.*)/) {
+				$link="=>#TAG $1>";
+			#Must be a relative file link
+			} else {
+				$link=$prefix.$link;
+				$link=~s/\/([\?\#].*)?$/\/!root$1/;
+				while ($link=~s/([^\/\.])+\/\.\.\///) {}; #Remove dir/../
+				$link=~s/^\.\///; #Remove . at beggining of line
+				$link=~s/[^\.]+\.\///g; #?
+				$link=~s/^([^\?]*)\?(.*)$/$1/i; #Remove parameters
+				foreach (@renametoroot) {$link=~s/^(.*\/){0,1}$_([\?\#].*)?$/$1!Root$2/i;}
+				$linkonly=$link;
+				$linkonly=~s/^([^\#]*)\#(.*)$/$1/i; #Remove tags
+				push @files,$linkonly;
+				$link=munge($link);
+				$link="=>$link>";
+			}
+			return "<";
+		} elsif (exists $attributes{"name"}) {
+			return "{tag $attributes{'name'}}";
+		}
+		return "";
+	} elsif ($tagtype eq "/a") {
+		return $link;
+	} elsif ($tagtype eq "img") {
+		if (lc $images eq "yes") {
+			return if not exists $attributes{'src'};
+			push @files,$prefix.$attributes{'src'};
+			$spritefile=munge($attributes{'src'});
+			return "{spritefile $spritefile}{sprite f,f $spritename}"
+		} else {
+			return $attributes{"alt"};
+		}
+	} elsif ($tagtype eq "p") {
+		$ret="\n\n";
+		#Only add an alignment tag if alignment is different from previous paragraph
+		if (lc($attributes{"align"}) ne $align && $attributes{"align"} ne '') {
+			$ret=$ret."{align";
+			if (lc($attributes{"align"}) eq "center") {
+				$ret=$ret." centre}";
+				$align="center";
+			} elsif (lc($attributes{"align"}) eq "right") {
+				$ret=$ret." right}";
+				$align="right";
+			} else {
+				$ret=$ret."}";
+				$align="left";
+			}
+		}
+		return $ret;
+	} elsif ($tagtype eq "/p") {
+		return "{align}" if $align ne "left";
+		return "";
+	} else {
+		return "";
+	}
+}
+
+#Get all the attribute fields of the HTML tag and give them to sub replace as an array
+sub getattr {
+	my ($wholetag,$tagtype,$attributes)=@_;
+	my (%attributes);
+	my ($wholetemp)=$wholetag;
+	while (($wholetemp=~s/(\w+)=(("([^"]*)")|(\w+))//i)) {
+		$attributes{lc($1)}=$4.$5;
+	}
+	return replace($wholetag,lc $tagtype,%attributes);
+}
+
+#Process the file passed as an argument
+sub processfile {
+	my ($infile,$outfile)=@_;
+	$outfile="$tempdir/$infile" if not defined $outfile;
+	my ($html,$image)=0,0;
+	#Rename indexes to !Roots
+	foreach (@renametoroot) {$outfile=~s/^(.*\/){0,1}$_$/$1!Root/i;}
+	#Check that we have not already processed this file
+	return if -e $outfile;
+	#Check we can find the file
+	if (not -e $infile) {
+		print "Cannot find file $infile, skipping\n";
+		return;
+	}
+	#Check for a suitable file extension (so we dont process .zip files etc.)
+	my ($temp)=$infile;
+	foreach (@htmlextensions) {
+		$html=1 if $temp=~m/$_$/i;
+	}
+	#If it does not have a suitable extension, check to see if it has no extension
+	$html=not $temp=~m/[^\/]*\.[^\/]*$/ if not $html;
+	if (not $html) {
+		foreach (@imageextensions) {
+			$image=1 if $temp=~m/$_$/i;
+		}
+	}
+	print "Processing file $infile...\n";
+	#Create any subdirectories needed
+	$temp=$outfile;
+	undef @temp;
+	while ($temp=~s/(.*)\/[^\/]*$/$1/) { push @test,$1 };
+	while (@test) {
+		$dir=pop @test;
+		mkdir $dir,0x1FF;
+	}
+	#Get the pathname (without leafname) for this file
+	$infile=~m/(.*\/)[^\/]*$/;
+	$prefix=$1;
+	if ($image) {
+		my ($tempinfile,$tempoutfile)=(munge($infile),munge($outfile));
+		system "$changefsi $tempinfile $tempoutfile $changefsiflags";
+	} elsif ($html) {
+		open("out",">".$outfile) or die "Can't create $outfile: $!\n";
+		open($handle,$infile);
+		$_ = <$handle>;
+		my ($t)='';
+		#Escape characters that StrongHelp needs escaping
+		s/\\/\\\\/g;
+		s/\{/\\\{/g;
+		#Remove excess whitespace (except when enclosed by <pre>...</pre> tags)
+		$t='';
+		my($aa, $bb, $dumA, $dumB);
+		while ($_) {
+			if (/<pre(\s[^>]*)?>.*<\/pre(\s[^>]*)?>/is) {
+				($aa, $bb, $dumA, $dumB, $_) = $_ =~ /^(.*?)(<pre(\s[^>]*)?>.*?<\/pre(\s[^>]*)?>)(.*)$/si;
+				$aa =~ s/\s+/ /gs;
+				$t.=$aa.$bb;
+			} else {
+				s/\s+/ /gs;
+				$t.=$_;
+				$_='';
+			}
+		}
+		$_=$t;
+		#Replace tags
+		s/(<(\s*|!\W*)(\/?\w+)([^<>]*)>)/getattr($1,$3,$4)/eig;
+		#Remove blank links
+		s/<=>[^>]*>//g;
+		#Replace named characters
+		s/\&\#1[03]\;//eig;
+		#Remove newlines inside anchors (StrongHelp does not like these)
+		while (s/<([^>\n]*)\n([^>]*)=>/<$1$2=>/g) {}
+		#Replace named characters
+		s/(\&#{0,1}\w+\;)/getnamedchar($1)/eig;
+		#Remove more excess whitespace
+		s/\n\n\n+/\n\n/g;
+		$t='';
+		while ($_) {
+			if (/\{fcode\}.*\{f\}/is) {
+				($aa, $bb, $_) = $_ =~ /^(.*?)(\{fcode\}.*?\{f\}[^\n]*\n?)(.*)$/s;
+				$aa =~ s/^ +//gm;
+				$t.=$aa.$bb;
+			} else {
+				s/^ +//gm;
+				$t.=$_;
+				$_='';
+			}
+		}
+		$_=$t;
+		s/^(\{[^\{\}]*\}) +/$1/mg;
+		#Get rid of extra space round SH tags
+		s/ +(\{[^\{\}]*\}) +/$1 /sg;
+			
+		#Remove tags inside anchors (StrongHelp does not like these)
+		while (s/<([^\{\}>]*)\{[^\{\}]*\}([^>]*)=>/<$1$2=>/) {}
+		#Remove excess linefeeds again
+		s/\n\n\n+/\n\n/g;
+		#Sort out multiple line {fcode} blocks that don't
+		#have a line break at the start
+		s/([^\}\s](\{[^\}]*\})*\{fcode\})(\S[^\{]*\n\s*[^\{])/\1\n\3/sg;
+		print out;
+	} else {
+		if ($^O eq "riscos") {
+			my ($tempinfile,$tempoutfile)=(munge($infile),munge($outfile));
+			system "copy $tempinfile $tempoutfile ~C~DF~L~N~P~QR~S~TV";
+		} else {
+			system "cp $infile $outfile";
+		}
+	}
+	close out;
+}
+
+#Read in whole file in one go - removes problems with tags spanning more than one line
+undef $/;
+
+#Read command line arguments (if any)
+$infile=$ARGV[0] if $ARGV[0] ne "";
+$outfile=$ARGV[1] if $ARGV[1] ne "";
+
+$align="left";
+$handle="currentfile";
+
+#Check StrongHelp is loaded
+if ($^O eq "riscos") {
+	if ((system('RMEnsure StrongHelp 2.75 Error Please load StrongHelp 2.75 or later and try again')) != 0) { exit 1; }
+}
+
+#Create temporary directory
+mkdir($tempdir,0x1FF);
+
+#Process the main file
+processfile($infile);
+while (@files) {
+	#Process any file linked to from main file
+	processfile(pop @files);
+}
+
+print "All files processed\n";
+

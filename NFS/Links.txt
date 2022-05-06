@@ -1,0 +1,12 @@
+https://en.wikipedia.org/wiki/Network_File_System
+
+http://linux-nfs.org/wiki/index.php/Main_Page
+
+https://web.archive.org/web/20080216083308/http://www.ietf.org/html.charters/nfsv4-charter.html
+
+https://datatracker.ietf.org/doc/html/rfc5661
+
+https://www.usenix.org/legacy/events/usenix05/tech/italks.html#nFSv4
+
+
+http://www.pnfs.com

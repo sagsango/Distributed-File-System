@@ -1,0 +1,40 @@
+# Makefile for WebJames the web server
+#
+# $Id: gcc,v 1.3 2003/01/02 00:15:10 ajw Exp $
+#
+# Settings for the gcc/unixlib build
+
+#Programs
+CC = gcc
+GCC = gcc
+LINK = gcc
+LN_S = @echo ln -s
+RM = rm -f
+MEMCHECK =
+SQUEEZE = Squeeze -f $@
+SETTYPE = SetType $@ Obey
+
+#Libraries
+MEMCHECKLIB =
+STUBS =
+OSLIB = OSLib:o.OSLib32
+OSLIBSUPPORT = OSLibSupport:o.OSLibSupport32
+REGEX = C:regex.libregex
+
+#Compiler flags
+THROWBACK = -mthrowback
+DEPEND = -mamu
+WARNINGS = -Wall -Wundef -Wpointer-arith -Wmissing-prototypes
+OPTIMISATION = -O2
+DEBUG = -mpoke-function-name
+INCLUDE = -IC:regex -IOSLib:
+GCCINCLUDE = -IOSLib: -IOSLibSupport:
+
+#Linker flags
+LINKDEBUG =
+
+#!Run file
+STDERR = .*
+TYPESTDERR = .*
+CLIB = .*
+

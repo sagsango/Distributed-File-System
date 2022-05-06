@@ -1,0 +1,11 @@
+Set PHP$Dir <Obey$Dir>
+IconSprites <PHP$Dir>.!Sprites
+Set File$Type_18A PHP
+Set Alias$PHP Wimpslot -Min 9000k -Max 9000k |M Run <PHP$Dir>.PHP %%*0
+
+Set PHP$Mail <PHP$Dir>.PHPMail
+
+|Enable the following line if you want PHP to use a dynamic area
+|Set PHP$Heap ""
+
+Obey <PHP$Dir>.SetRunType

@@ -1,0 +1,3 @@
+Dir <Obey$Dir>
+remove html2sh/zip
+zip -r -9 -I html2sh/zip HTML2SH Copying c ChangeLog Makefile strongcopy ReadMe -x *CVS* *svn* *.o.*

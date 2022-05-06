@@ -1,0 +1,95 @@
+# Makefile for WebJames the web server
+#
+# $Id: common,v 1.15 2003/01/02 00:15:10 ajw Exp $
+#
+# Parts common to all builds
+
+
+CFLAGS = $(THROWBACK) $(DEPEND) $(INCLUDE) $(WARNINGS) $(OPTIMISATION) $(DEBUG) $(FLAGS)
+LINKFLAGS = $(LINKDEBUG)
+
+
+WJOBJECTS = \
+	main.o\
+	webjames.o\
+	wjstring.o\
+	ip.o\
+	stat.o\
+	datetime.o\
+	report.o\
+	write.o\
+	openclose.o\
+	read.o\
+	cache.o\
+	coding.o\
+	attributes.o\
+	resolve.o\
+	cacheheap.o\
+	handler.o\
+	staticcontent.o\
+	webjamesscript.o\
+	cgiscript.o\
+	sendasis.o\
+	content.o\
+	autoindex.o \
+	serverparsed.o
+
+WJLIBS = \
+	$(OSLIBSUPPORT)\
+	$(OSLIB)\
+	$(STUBS)\
+	$(REGEX)\
+	$(MEMCHECKLIB)
+
+WJDIR = $(UP)$(DIRSEP)!WebJames$(DIRSEP)
+PHPDIR = $(UP)$(DIRSEP)!PHP$(DIRSEP)
+
+WJTARGET =     $(WJDIR)!RunImage$(EXT_FF8)
+WJRUN =        $(WJDIR)!Run$(EXT_FEB)
+WJPHPHELP =    $(WJDIR)help$(DIRSEP)php$(EXT_FAF)
+
+PHPGUI =        $(PHPDIR)!RunImage$(EXT_FF8)
+PHPSETRUNTYPE = $(PHPDIR)SetRunType
+PHPHELP =       $(PHPDIR)!Help$(EXT_FAF)
+
+all: $(WJTARGET) $(WJRUN) $(PHPGUI) $(WJPHPHELP) $(PHPSETRUNTYPE)
+
+
+$(WJTARGET): $(WJOBJECTS)
+	$(LINK) -o $@ $(LINKFLAGS) $(PHP_LDFLAGS) $(WJOBJECTS) $(WJLIBS) $(PHP_LIBS)
+	$(SQUEEZE)
+
+.c.o:
+	$(MEMCHECK) $(CC) -c $(CFLAGS) $(PHP_CFLAGS) $< -o $@
+
+
+$(WJRUN): run-default $(WJTARGET)
+	perl -e '$$size=`getwimpslot $(WJTARGET)`; $$size="10000k" if ($$size eq ""); $$size=~/(\d+)k/; $$size=$$1+1000; $$size.="k"; while (<>) { s/wimpslot/WimpSlot -min $$size -max $$size/; s/redirstderr$(STDERR)//; s/typestderr$(TYPESTDERR)//; s/clib$(CLIB)//; print;}' run-default > $@
+	$(SETTYPE)
+
+
+$(PHPSETRUNTYPE): setruntype-default
+	cp setruntype-default $@
+
+$(WJPHPHELP): $(PHPHELP)
+	-$(RM) $(WJPHPHELP)
+	$(LN_S) $(UP)$(DIRSEP)$(PHPHELP) $(WJPHPHELP)
+
+$(PHPGUI): PHPFrontEnd.c
+	$(GCC) $(GCCINCLUDE) -o $@ PHPFrontEnd.c -mlibscl $(OSLIBSUPPORT) $(OSLIB)
+
+
+clean:
+	-$(RM) $(WJTARGET)
+	-$(RM) $(WJRUN)
+	-$(RM) $(WJCONFIG)
+	-$(RM) $(WJATTRIBUTES)
+	-$(RM) $(WJDIR)log
+	-$(RM) $(WJDIR)clf
+	-$(RM) $(WJDIR)stderr
+	-$(RM) $(WJPHPHELP)
+	-$(RM) $(PHPDIR)php$(EXT_FF8)
+	-$(RM) $(PHPGUI) $(PHPSETRUNTYPE)
+	-$(RM) $(WJOBJECTS) PHPMail.o
+
+
