@@ -1,0 +1,3 @@
+done:
+  lec 09
+  lec 10
