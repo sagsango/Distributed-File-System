@@ -1,0 +1,72 @@
+== Using NFSv4 referrals with NFS-GANESHA == 
+
+NFSv4 referral is a NFSv4 specific mechanism that makes it possible for a server to redirect a client to another server as it crosses a directory. This is no "mount points within mount points" as you can make in NFSv3, the client is actually redirected to the new server and stop accessing the first one.
+
+A small example: let be server A and server B, and imagine that B's IP address is 123.456.789.123 (OK, this is a dumb address, but this is an example). The client will access A, find a referral a be redirected to B.
+
+B exports directories /export and /export/refer that are nfs-exported. From the mount point, this last directory is accessed as path (mountpoint)/refer
+
+The server A exports /home . In A's namespace, we create a directory /home/ref/nfs_referral to be used as referral. We'll then setup nfs-ganesha so that, when directory nfs_referral is traversed, the client is directed to B:/refer transparently.
+
+NFS referrals are described in https://tools.ietf.org/html/rfc7530
+
+Starting with nfs-ganesha version 2.5.1 a new implementation for nfs referrals on top of the vfs FSAL was added. This implementation is not based on entries in the configuration files but on extended attributes on the directory from where the referral should be delivered.
+
+In the above example on server A the directory /home/ref/nfs_referral must have the executable bits removed and the sticky bit set on the other permission bits. 
+
+<pre>
+chmod 1644 /home/ref/nfs_referral
+</pre>
+
+This is the trigger for nfs-ganesha to look for referrals. The referral destination has to be set via extended attributes. The attribute user.fs_location gets a value with destination-server:exported-path-on-destination server. In our example this is:
+
+<pre>
+setfattr -n user.fs_location -v 123.456.789.123:/refer /home/ref/nfs_referral
+</pre>
+
+=======================
+
+The code which made the below configuration possible was removed from nfs-ganesha some time ago.
+
+In nfs-ganesha's configuration file on server A, you must define two different 'Export' block.
+
+The first one in related to /home, it should contain this:
+<pre>
+EXPORT
+{
+
+  # Export Id (mandatory)
+  Export_Id = 1 ;
+
+  # Exported path (mandatory)
+  Path = "/home" ;
+
+ # Pseudo path for NFSv4 export (mandatory)
+  Pseudo = "/posix_fs";
+
+(...)
+
+}
+</pre>
+
+Then we define a new Export block to setup the referral.
+<pre>
+EXPORT
+{
+
+  # Export Id (mandatory)
+  Export_Id = 2 ;
+
+  # Exported path (mandatory)
+  Path = "/home/ref/nfs_referral" ;
+  Referral = "/posix_fs/nfs_referral:/refer@123.456.789.123" ;
+(...)
+}
+</pre>
+
+The argument Referral is to be explained a little bit. Its content is made of 3 part : (local pseudofs path):(remote path)@(server)
+***the 'local pseudofs path' is the full path to the referral directory in server A pseudofs, you have to consider the value of 'Pseudo' is the first Export block (or do 'mount -t nfs4 A:/ /mnt' do get the path to use)
+***the remote path is the path on B for the referral
+***the last part should contain the server IP address. The server hostname could be used as well, but at the time I am writting this, it seems like the NFSv4 client in the kernel as problems in resolving hostname, so the explicit use of the IP address is preferable.
+
+

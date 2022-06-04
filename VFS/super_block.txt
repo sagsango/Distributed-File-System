@@ -1,0 +1,160 @@
+http://books.gigatux.nl/mirror/kerneldevelopment/0672327201/ch12lev1sec5.html
+
+The Superblock Object
+
+The superblock object is implemented by each filesystem, and is used to store information describing that specific filesystem. This object usually corresponds to the filesystem superblock or the filesystem control block, which is stored in a special sector on disk (hence the object's name). Filesystems that are not disk-based (a virtual memorybased filesystem, such as sysfs, for example) generate the superblock on the fly and store it in memory.
+
+The superblock object is represented by struct super_block and defined in <linux/fs.h>. Here is what it looks like, with comments describing each entry:
+
+struct super_block {
+        struct list_head        s_list;            /* list of all superblocks */
+        dev_t                   s_dev;             /* identifier */
+        unsigned long           s_blocksize;       /* block size in bytes */
+        unsigned long           s_old_blocksize;   /* old block size in bytes */
+        unsigned char           s_blocksize_bits;  /* block size in bits */
+        unsigned char           s_dirt;            /* dirty flag */
+        unsigned long long      s_maxbytes;        /* max file size */
+        struct file_system_type s_type;            /* filesystem type */
+        struct super_operations s_op;              /* superblock methods */
+        struct dquot_operations *dq_op;            /* quota methods */
+        struct quotactl_ops     *s_qcop;           /* quota control methods */
+        struct export_operations *s_export_op;     /* export methods */
+        unsigned long            s_flags;          /* mount flags */
+        unsigned long            s_magic;          /* filesystem's magic number */
+        struct dentry            *s_root;          /* directory mount point */
+        struct rw_semaphore      s_umount;         /* unmount semaphore */
+        struct semaphore         s_lock;           /* superblock semaphore */
+        int                      s_count;          /* superblock ref count */
+        int                      s_syncing;        /* filesystem syncing flag */
+        int                      s_need_sync_fs;   /* not-yet-synced flag */
+        atomic_t                 s_active;         /* active reference count */
+        void                     *s_security;      /* security module */
+        struct list_head         s_dirty;          /* list of dirty inodes */
+        struct list_head         s_io;             /* list of writebacks */
+        struct hlist_head        s_anon;           /* anonymous dentries */
+        struct list_head         s_files;          /* list of assigned files */
+        struct block_device      *s_bdev;          /* associated block device */
+        struct list_head         s_instances;      /* instances of this fs */
+        struct quota_info        s_dquot;          /* quota-specific options */
+        char                     s_id[32];         /* text name */
+        void                     *s_fs_info;       /* filesystem-specific info */
+        struct semaphore         s_vfs_rename_sem; /* rename semaphore */
+};
+
+The code for creating, managing, and destroying superblock objects lives in fs/super.c. A superblock object is created and initialized via the alloc_super() function. When mounted, a filesystem invokes this function, reads its superblock off of the disk, and fills in its superblock object.
+
+Superblock Operations
+
+The most important item in the superblock object is s_op, which is the superblock operations table. The superblock operations table is represented by struct super_operations and is defined in <linux/fs.h>. It looks like this:
+
+struct super_operations {
+        struct inode *(*alloc_inode) (struct super_block *sb);
+        void (*destroy_inode) (struct inode *);
+        void (*read_inode) (struct inode *);
+        void (*dirty_inode) (struct inode *);
+        void (*write_inode) (struct inode *, int);
+        void (*put_inode) (struct inode *);
+        void (*drop_inode) (struct inode *);
+        void (*delete_inode) (struct inode *);
+        void (*put_super) (struct super_block *);
+        void (*write_super) (struct super_block *);
+        int (*sync_fs) (struct super_block *, int);
+        void (*write_super_lockfs) (struct super_block *);
+        void (*unlockfs) (struct super_block *);
+        int (*statfs) (struct super_block *, struct statfs *);
+        int (*remount_fs) (struct super_block *, int *, char *);
+        void (*clear_inode) (struct inode *);
+        void (*umount_begin) (struct super_block *);
+        int (*show_options) (struct seq_file *, struct vfsmount *);
+};
+
+Each item in this structure is a pointer to a function that operates on a superblock object. The superblock operations perform low-level operations on the filesystem and its inodes.
+
+When a filesystem needs to perform an operation on its superblock, it follows the pointers from its superblock object to the desired method. For example, if a filesystem wanted to write to its superblock, it would invoke
+
+sb->s_op->write_super(sb);
+
+where sb is a pointer to the filesystem's superblock. Following that pointer into s_op yields the superblock operations table and ultimately the desired write_super() function, which is then directly invoked. Note how the write_super() call must be passed a superblock, despite the method being associated with one. This is because of the lack of object-oriented support in C. In C++ or C#, a call such as
+
+sb.write_super();
+
+would suffice. In C, there is no way for the method to cleanly obtain its parent, so you have to pass it.
+
+Take a look at the superblock operations, which are specified by super_operations:
+
+struct inode *
+alloc_inode(struct super_block *sb)
+
+This function creates and initializes a new inode object under the given superblock.
+
+void destroy_inode(struct inode *inode)
+
+This function deallocates the given inode.
+
+void read_inode(struct inode *inode)
+
+This function reads the inode specified by inode->i_ino from disk and fills in the rest of the inode structure.
+
+void dirty_inode(struct inode *inode)
+
+This function is invoked by the VFS when an inode is dirtied (modified). Journaling filesystems (such as ext3) use this function to perform journal updates.
+
+void write_inode(struct inode *inode,
+                  int wait)
+
+Writes the given inode to disk. The wait parameter specifies whether the operation should be synchronous.
+
+void put_inode(struct inode *inode)
+
+This function releases the given inode.
+
+void drop_inode(struct inode *inode)
+
+This function is called by the VFS when the last reference to an inode is dropped. Normal Unix filesystems do not define this function, in which case the VFS simply deletes the inode. The caller must hold the inode_lock.
+
+void delete_inode(struct inode *inode)
+
+This function deletes the given inode from the disk.
+
+void put_super(struct super_block *sb)
+
+This function is called by the VFS on unmount to release the given superblock object.
+
+void write_super(struct super_block *sb)
+
+This function updates the on-disk superblock with the specified superblock. The VFS uses this function to synchronize a modified in-memory superblock with the disk.
+
+int sync_fs(struct super_block *sb, int wait)
+
+This function synchronizes filesystem metadata with the on-disk filesystem. The wait parameter specifies whether the operation is synchronous.
+
+void write_super_lockfs(struct super_block *sb)
+
+This function prevents changes to the filesystem, and then updates the on-disk superblock with the specified superblock. It is currently used by LVM (the Logical Volume Manager).
+
+void
+unlockfs(struct super_block *sb)
+
+This function unlocks the filesystem against changes as done by write_super_lockfs().
+
+int statfs(struct super_block *sb,
+           struct statfs *statfs)
+
+This function is called by the VFS to obtain filesystem statistics. The statistics related to the given filesystem are placed in statfs.
+
+int remount_fs(struct super_block *sb,
+                int *flags, char *data)
+
+This function is called by the VFS when the filesystem is remounted with new mount options.
+
+void clear_inode(struct inode *)
+
+This function is called by the VFS to release the inode and clear any pages containing related data.
+
+void umount_begin(struct super_block *sb)
+
+This function is called by the VFS to interrupt a mount operation. It is used by network filesystems, such as NFS.
+
+All these functions are invoked by the VFS, in process context. They may all block if needed.
+
+Some of these functions are optional; a specific filesystem can then set its value in the superblock operations structure to NULL. If the associated pointer is NULL, the VFS either calls a generic function or does nothing, depending on the operation.

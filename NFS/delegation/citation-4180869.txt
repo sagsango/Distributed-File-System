@@ -1,0 +1,1 @@
+Batsakis, A. & Burns, Randal. (2005). Cluster delegation: High-performance, fault-tolerant data sharing in NFS. 100 - 109. 10.1109/HPDC.2005.1520942. 

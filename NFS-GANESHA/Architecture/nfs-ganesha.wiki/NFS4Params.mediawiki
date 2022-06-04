@@ -1,0 +1,3 @@
+= NFSv4 Protocol Parameters =
+
+These are documented in the man page: https://github.com/nfs-ganesha/nfs-ganesha/blob/next/src/doc/man/ganesha-core-config.rst

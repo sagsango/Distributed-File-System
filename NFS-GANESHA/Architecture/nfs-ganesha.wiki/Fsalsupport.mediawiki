@@ -1,0 +1,158 @@
+*** Work in Process ***
+
+= FSAL Documentation =
+This documentation applies to NFS Ganesha for Version 2.0 and later.  Prior versions of the server, although there was the concept of a FSAL, did not have the capabilities described here.  That old interface is deprecated and no longer maintained or documented.
+
+;NOTE:
+: The term ''FSAL'', pronounced however you like, is an acronym for '''F'''ile '''S'''ystem '''A'''bstraction '''L'''ayer.
+
+A FSAL is a dynamically loaded shared object library.  The server will load and initialize  all of the FSALs defined in its configuration file.  There must be at least one FSAL loaded and initialized for the server to start.
+
+Most of the FSALs take or require configuration parameters for their proper initialization.  See the [[Configurationfile | Configuration File]] page for details.
+
+== Supported FSAL Backends ==
+As of the release of Version 2.0, there are nine supported FSALs.  Any and all of them can be loaded and used in the running server.  The functions and capabilities of each is documented below.
+
+=== CEPH ===
+CEPH is a distributed filesystem originally developed at the University of California, Santa Cruz and now supported by the [http://ceph.com Ceph Project].  This FSAL links to a modified version of the CEPH library that has been extended to expose its distributed cluster and replication facilities to the pNFS operations in the FSAL.
+
+NFS Ganesha runs as both the metadata server and the data server for this FSAL.  The first version only supports file layouts for pNFS but other layouts are being planned.
+
+The CEPH library modifications have not been merged into the upstream yet.  This is an ongoing process and the plan is to eventually have the necessary support in upstream.
+
+Additional documentation here: https://github.com/ceph/ceph/blob/master/doc/cephfs/nfs.rst
+
+=== GLUSTER ===
+GlusterFS is a filesystem distributed by Red Hat in both the Fedora distribution and Red Hat Enterprise Linux.  This FSAL is experimental at this time but is expected to be fully supported by the GlusterFS team at some point.
+
+Additional documentation here: [[GLUSTER]]
+
+=== GPFS ===
+GPFS is a clustered filesystem developed and supported by IBM.  They are currently shipping products based on GPFS and an pre-2.0 version of the server.  The version 2.0 FSAL supports files layout pNFS.  As with CEPH, NFS Ganesha serves as both the metadata and data server.
+
+Additional documentation here: [[GPFS]]
+
+=== PROXY_V3 ===
+The PROXY FSAL operates as an NFSv3 client of other NFS servers.  One of its uses is to act as a gateway (proxy) for NFSv4.x and 9P (Plan 9 remote filesystem) clients to NFSv3 servers.  It can not support pNFS. Additional documentation here: [[PROXY_V3-and-PROXY_V4]]
+
+=== PROXY_V4 ===
+The PROXY FSAL operates as an NFSv4.1 client of other NFS servers.  One of its uses is to act as a gateway (proxy) for NFSv3 and 9P (Plan 9 remote filesystem) clients to NFSv4.1 servers.  It does not support pNFS. Additional documentation here: [[PROXY_V3-and-PROXY_V4]]
+
+=== VFS ===
+This is the workhorse FSAL for Ganesha.  It supports any POSIX compliant operating system that has support for ''file handles''.  For Linux it supports any local filesystem running on kernels later than 2.6.39.  For earlier kernels it can only support XFS natively.  It also supports FreeBSD 8.1 and above if the kernel has been patched with the necessary system calls for supporting ''file handles''.
+
+This FSAL does not support pNFS.
+
+Additional documentation here: [[VFS]]
+
+=== XFS ===
+This is a variant of FSAL_VFS that works only with xfs filesystems. It is NOT dependent on the open_by_handle_at/name_to_handle_at interfaces of the kernel since xfs provides it's own interface for working with NFS handles.
+
+Additional documentation here: [[VFS]]
+
+=== LUSTRE ===
+This FSAL which is also a variant of FSAL_VFS uses the LUSTRE distributed filesystem as its backend. It does not currently support pNFS but file layout support is planned for a future version. This is a specific implementation of FSAL_VFS and current support is limited.
+
+Additional documentation here: [[XFSLUSTRE]]
+
+=== RGW ===
+This FSAL uses the Ceph RGW store as a backend.
+
+More text needed...
+
+Additional documentation here: https://github.com/ceph/ceph/blob/master/doc/radosgw/nfs.rst
+
+=== KVSFS ===
+Description needed
+
+=== LIZARDFS ===
+Description needed
+
+== Stacking FSALs ==
+
+NFS-Ganesha supports a stacked FSAL architechture with additional documentation here: [[Stacked-FSAL]]
+
+=== FSAL_MDCACHE ===
+
+MDCACHE is a built in stacked FSAL used on top of every FSAL. It provides the basic handle cache as well as attribute and directory entry caching. The attribute and directory caching can be configured to have minimal or no impact however, NFS Ganesha MUST always have a handle cache in order to map NFS wire handles into FSAL objects such as files and directories.
+
+=== FSAL_NULL ===
+
+This is a do nothing stackable FSAL to illustrate the concept.
+
+== ACL Support ==
+See https://github.com/nfs-ganesha/nfs-ganesha/wiki/ACL-Support
+
+== POSIX File Systems ==
+
+FSAL_GPFS, FSAL_VFS, FSAL_XFS, and FSAL_LUSTRE all utilize POSIX file systems mounted on the Ganesha host. Please see this page for additional details regarding POSIX file systems and how they are used by those FSALs.
+
+https://github.com/nfs-ganesha/nfs-ganesha/wiki/File-Systems
+
+== Building support files for FSALS ==
+
+Here are some recipes for building support for some FSALs:
+
+=== FSAL_KVSFS ===
+
+This FSAL requires kvsns:
+
+* git clone https://github.com/phdeniel/kvsns.git
+* dnf install -y libini_config-devel libini_config hiredis-devel hiredis
+* cd kvsns/
+* cmake ./
+* make install
+
+=== FSAL_LIZARDFS ===
+
+* git clone https://github.com/lizardfs/lizardfs.git
+* dnf install -y spdlog spdlog-devel
+* cd lizardfs/
+* mkdir build
+* cd build
+* cmake .. -DENABLE_CLIENT_LIB=YES
+* make install
+
+=== FSAL_GLUSTER ===
+
+* dnf install -y libgfapi-devel
+
+== FSAL API ==
+The FSAL API is the interface between the core server and the shared object library that implements the backend filesystem support of the FSAL.  This interface is a set of defined data structures and function calls along the model of the VFS layer of the Linux kernel.  The API is versioned and the server will detect a version missmatch at initialization time but there is no defined, unchangeable ABI for this interface.  A newer version server can load and use an older FSAL under certain circumstances but this version linkage is not guaranteed in the way that enterprise Linux kernels guarantee a driver ABI.
+
+The interface itself is extensively documented by Doxygen in the source.  Developers should refer to that documentation in the file <code>src/include/fsal_api.h</code> for the definitive description.  The VFS FSAL is also the reference implementation for the FSAL side of this interface.  The following is an overview of the API.  The detail is in the Doxygen source.
+
+Every object gets created by a method in its parent.  See the specifics below.  The one exception is the FSAL itself which is loaded by a simple function call.
+
+Every object has a ''release'' method.  This gives back the reference that was made whenever the object was looked up or created.  The ''release'' is called when the object is no longer needed.  When the last reference is removed, the object is returned to storage.  See below for specific actions for that object.
+
+=== The FSAL Object ===
+The FSAL itself, its initialization, management, and removal is managed by this object.  The core loads the FSAL based on configuration file parameters and as part of its loading, the fsal registers itself as as FSAL object.  It maintains a list of all the ''export objects'' it creates.
+
+As stated above, the FSAL object itself is created by a simple function call.  The process of setting up the FSAL however is a bit more complex.  The following sequence loads and initializes a FSAL:
+
+# The ''load_fsal'' function initiates the FSAL loading and initialization.  The real work is done by the ''dlopen'' system library call.  The locks and state checking is used to both provide a stable environment for the next step and to validate that the FSAL has properly started.
+
+# We take advantage of a property of loadable libraries.  The system's dynamic loader calls all the functions defined in the ''.init'' section of an executable file as the last step before the loader returns control to its caller.  This was invented to manage the execution of the constructors of ''C++'' global objects.  We use it to initialize the FSAL module. This function allocates and initializes the private memory of the FSAL object.
+
+# The FSAL initializer function calls ''register_fsal'' if it has successfully set up its private resources.  This function, inside the FSAL manager, finishes the work by adding it to the list of active fsals.
+
+# The last step is to initialize the FSAL module from the configuration file.  The ''init_fsals'' function loops through all of the loaded FSAL modules and calls their ''init_config'' method.  This two stage initialization is required because the FSAL is loaded as soon as the configuration parsing process encounters the the loading parameters but the processing of the FSAL specific portions of the configuration file by the FSAL itself.
+
+The ''release'' method for the FSAL removes it from the FSAL list and unloads the shared object from the address space.
+
+The ''create_export'' method is used to attach an export to the backend filesystem supported by the FSAL.
+
+=== Export Objects ===
+An ''export object'' is created by the fsal based on directives in the configuration file.  The end result is that the ''export object'' is related to a exported filesystem. In the case of NFSv3 exports, the path to this export is placed in the export list.  In the case of NFSv4+, the export is attached to the ''pseudo filesystem'' as a junction.
+
+The ''export object'' instance maintains a list of all file system objects that are referenced and currently active in the server core's metadata cache.
+
+There are two types of export object methods that manage or create object handles.  The ''lookup'', ''lookup_path'', and ''lookup_junction'' query the underlying filesystem and return object handles to them.  The ''create_handle'' also returns an object handle but it is used for the case where a client does an operation of an object handle that has been dropped from the cache, usually due to lack of activity.
+
+The second type is ''extract_handle''.  Each filesystem backend has its own unique file handle format and this method takes the opaque portion of a protocol handle and make sense of it because the export and its FSAL know what it should look like.
+
+A ''release'' method can only be successfully called on an export that no longer has any allocated and active object handles.
+
+=== Object Handles ===
+A ''handle object'' holds the server's representation of a referenced object in the backend filesystem.  These objects are related one-to-one with entries in the core's metadata cache.  Each object stores the backend "attributes", open file descriptors, and other state for that object as long as the server keeps its cache entry active.  The various methods manage the mapping of the backend filesystems metadata, aka inode data, to the common metadata structures within the server.

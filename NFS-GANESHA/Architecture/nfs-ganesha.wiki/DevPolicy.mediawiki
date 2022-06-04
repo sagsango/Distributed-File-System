@@ -1,0 +1,534 @@
+= Development Policies =
+Our goal is understandable consistancy in what we are already doing.
+
+== **** This is a work in progress **** ==
+----
+= Source Code Structure =
+The code base itself has its own structure based on the internal
+architecture of the server.
+This section really describes the next level up, how we manage
+branches and tags and what each means and why.
+
+== Repository Access Controls ==
+The official NFS Ganesha repository on Github has been set up with access
+controls that allows ''fetch'' access to anyone but restricts ''push'' access
+to the developers designated as release manager(s).  This group of developers
+are members of the ''owners'' group in the ''nfs-ganesha'' Github organization.
+Each branch has its own release manager who, by convention and agreement,
+has sole control of that branch.
+
+== Branches and Tags ==
+Branches and tags mean different things to different people depending on
+what source management tools they are familiar with.
+We are using ''git'' for this project so we use tags and branches in the
+''git'' way.  More accurately, we strive to do things the Linux kernel way
+if for no other reason than they have been doing it for a long time,
+developed ''git'' to facilitate that workflow and seem to be very successful
+at what they do.
+
+First a word about tags.  ''Git'' has three types of tags and we use them
+in very specific ways.
+
+; Simple Tags
+: These are references to commits in a repository.  They are very handy for finding things or marking a spot.  This is a people readable convenience which is much more "user friendly" than a 40 character SHA1, what it really points to.  We do not use this type of tag for code management but they are very useful for finding things in a working repository.
+
+; Annotated Tag Objects
+: This type of tag is a repository object, not just a local reference.  This type of tag is used to mark release points in the repository.  The tag always has an comment which describes what the tag is for.
+
+; Signed Tags
+: This is an annotated tag that has been cryptographically signed.  Official releases are tagged with this type of tag by the release manager using his or her published GPG key.  The signing guarantees to the end user that the code referenced by this tag is what it says it is.
+
+=== Tags are Official ===
+We are very specific about how we use branches and tags.  In ''git'', a branch can be more fluid than in other source management systems.  They can be merged, renamed, and can even disappear.  We use branches to categorize and track work but we do not depend on them for release management.
+
+On the other hand, tags point to a unique and exact history or chain of commits that make up the state of the source tree regardless of what the branch it is on, what it is currently called, or how that history got assembled.  In the simple case, the tag can and does point to a single chain all the way back to the beginning of development.
+
+=== Official Branches ===
+We manage three types of branches in the official repository.
+==== Stable Releases ====
+All official, stable releases are located on the '''master''' branch.
+Each release point is tagged with a signed tag that names the release.
+
+A release tag is named as '''Vmajor.minor.patch''' where '''major''' is a
+monotonically increasing number that is incremented whenever the new release
+significantly changes the functionality in the server.  The '''minor''' number
+is incremented for all other releases.
+It is reset to 0 (zero) whenever the '''major''' number is incremented.
+For example, the tag '''V2.0.0''' marks the next major change and release after '''V1.5.0'''.
+The '''patch''' number is always 0 (zero) on the '''master''' branch.
+This is a place holder for the support branch to use.
+
+==== New Development ====
+New development takes place on the '''next''' branch of the repository.
+Its tags mark periodic updates during the development process.
+Once a development cycle is completed, this branch is fast-forward
+merged to the '''master''' branch and tagged as noted above.
+
+The next round of development will continue on the '''next''' branch.
+See below for the tagging conventions used on the '''next''' branch.
+
+==== Support Branches ====
+Support branches will be created to maintain a separate stream of support changes.
+The branch is taken from the '''master''' branch at the release tag.
+This makes the release tag from '''master''', i.e. '''V2.0.0''' the first
+tagged release on the support branch.
+Each subsequent bugfix release on this branch increments the '''patch'''
+number.
+Commits are added and tagged in these branches under the control
+of that branch's release manager.
+
+Not every release on the '''master''' branch has a stable branch taken from it.
+Bugfix releases should aggregate patches to reduce churn for end users but they
+should also be timely for fixing serious defects.
+Low impact issues can be deferred to the next functional release.
+
+End users are encouraged to keep up to date with mainline releases.
+Support branches are for timely bugfix updates between functional
+releases and may be frozen (no updates or support) at some point after the next
+functional release.
+Some support branches may be maintained for longer periods if a developer
+volunteers to be its release manager and maintainer.
+
+
+= Development Cycle =
+All new development starts in the '''next''' branch.
+The release manager is responsible for merging pull requests from the
+developer community and publishing updates into the '''next'''.
+
+The release manager may designate other developers to review and aggregate
+commits.
+This is a quality control and workload leveling  measure common in active
+and growing Open Source projects and NFS Ganesha has reached that point.
+We are modeling our maintainer roles and
+workflow on the Linux kernel workflow (because it works).
+
+The '''next''' branch is periodically updated so that developers can rebase
+their work close to the next merge point.  The next section describes
+how that cycle is managed.
+
+Although we use Git and Github for development, we use a hybrid of both toolsets when publishing new work.
+This is documented in the form of scripts [[GitMerge|Merge Recipes]]
+
+== New Feature Development ==
+This is (or can be) a place of both planned and unplanned chaos.
+The goal of this part of the cycle is to get working new code in so it
+can be tested and used.  This means that regressions can and do happen and new things
+will break.
+
+A weekly cycle for branch updates seems to work best (so far).  It is somewhat
+keyed to the weekly project concall where we discuss what is in this week's
+update and what can be expected in the next week.  We have adopted some
+simple conventions for this period.
+
+The release manager maintains git remotes for all the contributors who have sent a pull request.
+Doing a periodic ''remote update'' gives a reasonable look into what is in everybody's pipeline.
+
+* Contributors have been sending pull request emails all week.  They just pile up until the window closes.
+* The merge window closes on Thursday afternoon (The concall is Thursday morning). The real close is the last ''remote update''.
+* The order of merges is somewhat arbitrary, whatever is easiest to merge.  There are times when cherry picks are more appropriate.  If there are potential merge conflicts, sometimes a local branch and rebase on current merge HEAD is cleaner.
+* The merge result is built with ''Maintainer'' build type to get a strict compile and an ''everything'' build configuration to leave no compilation unit unturned.
+* A reasonable amount of testing is done.
+** pynfs with the ''all'' option is run for NFSv4 validation.
+** Two mounts, one NFSv3 and the other NFSv4, are used for the ''git clone'' test.  This test is a clone followed by some checkouts followed by a recursive ''rm -rf'' of the clone.  ''Git'' is a good breaker of filesystems...
+** The merge passes if both clone tests pass
+* The branch is tagged
+** The name is of the form: '''pre-2.0-dev_XX''' where XX starts at '1'.
+** The annotation comment contains a short list of the changes.
+* The merge branch is pushed to '''next''' followed by a push of the tag.
+* An announcement is sent to the mailing list with:
+** the URL of the repository, the branch (always '''next''') and the tag.
+** The "Highlights" list from the annotated tag
+** A short log of all the commits since the last push.
+** A summary of that week's effort.  This is the place to note things like regressions.
+
+; NOTE
+: A reasonable amount of testing is done.  There are times when the merge suffers breakage.  Some problems are fixed, others are noted in the announcement, but severe ones or bad surprises result in rejected commits.  Which choice is determined mainly by the goal to get the merge published by the end of the day on Friday, little else.
+
+We expect the community, mainly the developers who made a pull request that week, to test the new update as their first step in the next round.  Once they verify that nothing is broken from the merge, they can rebase their new work and continue with the next round.
+
+== Release Candidates ==
+Once all the new functionality for a release is in place, we can start release candidates.  The main difference between a release candidate phase and the new development before it is what is accepted and more thorough testing.
+
+The development moves to release candidate when the key developers agree that
+all of the new work is functionally complete.  They also identify who or which groups will be testing each candidate round.
+
+The details:
+
+* Commits are restricted to bugfixes only.  New development not agreed to by the community for the release is deferred.
+* More formal testing is done prior to the update.
+** The release manager will push the merge to another branch after his/her testing.
+** The testers (company QA groups) pull the branch and test it with their pre-agreed tests and publish the results to the mailing list and wiki.
+** Test failures are triaged and assigned to developers for fixing.
+** Unless there is serious breakage, the release candidate is passed.  Serious regressions/bugs are the first priority for the next candidate round.
+* Once the testing,triage is complete and agreed, the update is pushed to '''next'''.
+** The tag is now named '''pre-2.0-RCxx''' where xx starts with 0 (zero).
+** The announcement process is the same except that test and triage status is added to the summary.
+
+This process continues until the subsystem maintainers and the testers agree that the release is stable.  The decision is based on the reality that perfection should not be the enemy of works-well.
+It is also better to push a candidate with regressions so that developers have a stable base to use for developing the fix on than to hold the candidate while someone tries to fix things.
+
+== Finalizing the Release ==
+The end of the release candidate cycle triggers the work required to publish a release.
+
+TBD.  Things like we make tarballs, update change logs, roll new rpms, throw a party.
+
+== Issue Tracking ==
+Github provides an issue tracker as part of its web presence.  We will use it as follows:
+
+* It will not be used during the new development cycle.  The mailing list, concall and other means and documents are better suited for that activity.
+* It will be used during the release candidate cycle to track testing.  All issues must be resolved, either with a fix or by explicit deferral before finalizing the release.
+* It will be used to track issues with anything on the '''master''' branch or actively supported stable branches, i.e. official, supported releases.  The issue is updated at each stage including which branches get the fix.  This includes all relevant active branches.
+
+Where companies are maintaining their own issue trackers for products that include NFS Ganesha, it is strongly recommended that they:
+
+* Open an issue on the Github issue tracker.  The person who can best produce the fix would likely not work at that company or might have a valuable insight that can help the person at that company who is assigned the issue.
+* Consult the NFS Ganesha issue tracker when they get issue reports from their customers.  Often, someone else has already found and fixed the problem.
+* Set up a reference or comment in their internal company tracker to the related issue(s) on the NFS Ganesha tracker.
+* Use the commit ids (SHA1) from the official tree instead of the commit ids from a local ''git'' or other source manager.  Remember, these SHA1s can change when they are merged.  See Bugfix Workflow for how to manage bugfix merges.
+== Mixing Support and Development ==
+We all know the fate and lot of developers.  we will not go into the angst and whatnot of our existence here.  What we do need to cover is how bugs get fixed where there is active development, release support, and stable branch maintenance involved.
+
+Our goal is to get things fixed in all relevant places in an orderly manner.  Our non-goal is to have multiple ad-hoc fixes, especially local fixes that never get reported to anyone else.
+
+The following section does not apply to bugs found in new development code.
+Such issues are a local matter for the developers involved.
+It is good practice to use commit comments to refer to any previous commits
+that can be identified as the source of the bug but that is a nice-to-have.
+
+=== Bugfix Workflow ===
+The scenario is a customer is using a product that includes NFS Ganesha
+and the bug analysis points to a problem in NFS Ganesha.  What to do?
+
+The first answer is that the company fixes the problem locally,
+makes their customer happy with an updated package,
+and moves on to the next support call.
+This also the wrong answer.
+Just for openers, the company will realize their error some extended time
+later when they attempt to update their next release to the latest NFS Ganesha
+release and find a very dark cave full of nightmares.
+
+==== Fixing the Bug ====
+The correct answer take a little more time and coordination but it pays off
+quickly in timely support.  The short form flow is:
+
+* Identify the problem and then poke about in NFS Ganesha's issue tracker and the '''next''' development branch.  Who knows.  You may find that it is already fixed, at which point, you are (almost) done.  Pull the patch(es) and make your customer happy.
+* If you get this far, let's assume you found the patch on '''next''' or someone in the community may have a fix.
+* Open a issue on the NFS Ganesha issue tracker.  Include the proposed patch. This is best in the form of a pull request from your repo.
+* The patch gets reviewed, tested, and merged to '''next'''.
+* The commit from '''next''' gets merged and pushed to the appropriate stable branch(s).
+* You pull the update of the stable branch, merge it into your local tree and send a fix to your customer.
+
+This raises a few questions.  Why to '''next''' first?  And, what do these patches look like?
+
+The answer to the first question is simple.
+If the bug first shows up in the older code, it is probably laying about
+ready to strike in the new code.  If the fix is committed here first, it won't pop up later when the bug decides to come out from under its rock.
+
+The answer to the second question is that the patch should '''''always''''' be done and tested in the '''next''' branch.
+This is where active development happens and this is where it will get the most attention.
+If the patch is made in the context of the '''next''' branch it may
+also reveal other issues that might be missed if the work was confined
+to a stable tree, or worse, a local branch of a active private repository.
+The world of bugs is bigger than one customer base or one particular use case.
+
+==== Backporting the Patch ====
+Backporting a patch from '''next''' is easier, if for no other reason, we know where we have been.  Forward porting patches gets messy,
+especially since new development often refactors old code.  Trust me.
+
+The process of backporting may gather up other commits along the way.
+You may have only uncovered one symptom or potential fix in the original analysis.
+There may be other, partial fixes already in '''next''' around this problem.
+Remember the history trail leading into '''next''' came from the place where
+your bug was found.  Pick up these extra commits and backport them too.
+
+Observe the following rules when backporting:
+* Where at all possible, ''cherry pick'' the patch whole.
+* Annotate the cherry pick with the commit it came from so we can track where it came from.  This is the <code>-x</code> option to the command.
+* If the backport does involve other intervening patches, get the order right, annotate the cherry pick.
+* Indicate in the pull request to the appropriate stable branch what is going on.  The branch maintainer may include some of your additional comments in the merge comments.
+* Use the update from the stable branch as the final fix to the product update.  This is important.  If you don't back out local bits that may have expedited things with support, this will bite badly later.
+
+==== Bugfix Releases ====
+Bugfix releases are pushed to the appropriate stable branch(es) and tagged appropriately for that branch.
+Patches should also be aggregated so as to minimize churn on the branch.
+The exception is for serious defects that must be fixed in a timely manner.
+
+= Patch Submission Guidelines =
+The first rule every developer must learn in Open Source development is that
+someone else must read what you wrote and if you did not do your homework,
+they can and will reply in a very public forum.
+Make it easy for them.  You are preparing one patch.  The subsystem maintainers
+and the release manager have to read hundreds of them.
+That and get their own work done.
+
+Good patches make happy reviewers.
+And happy reviewers don't bark at you in public.
+
+== Preparing a Good Patch ==
+There are a few simple rules for preparing a good patch.
+
+# Rebase to as close to HEAD of the branch ('''next''') as you can.
+# Keep it simple, clear, obvious.
+# Make it textually clean.  Proper code style, no trailing whitespace!
+# One issue, one commit.
+# Don't mix whitespace (formatting) fixes with logic fixes.
+# If the fix is multiple commits, one should logically flow into the next.
+# Your patch(es) must be bisectable.
+# A good commit comment has the following:
+## No line is longer than 80 chars.  Yes, your editor does nice word wrapping and formatting. Don't expect your reviewer to have the same.
+## The first line is a concise, relevant statement.  That is what we see first.
+## Leave the second line blank.  This makes lots of tools happ(ier).
+## Not all comments are crisp one liners.  Say more rather than less.
+## If you cherry picked, use <code>-x</code> so we know where to look for the original.
+## Leave a blank line after the body of your commit.
+## Always, always end the patch with your SoB.  The <code>-s</code> will do this for you.
+# If you are sending the patch via email,
+## There is a whole infrastructure in ''git'' for this.
+## Spend some time researching how kernel maintainers do it.  Do what they do.
+## Format the patch with ''git format-patch''.  An inline diff makes the person you are asking to accept your work do extra work to turn your fix into a good patch.
+## Send a "cover letter" email introducing your patch.
+## Turn '''''OFF''''' all the fancy formatting in your email composer.  Send plain UTF-8 text.
+## If you send a single patch, don't send it as an attachment.  Inline it. The git tools know how to look for ''format-patch'' text embedded in an email but not in attachments (which can do nasty things).
+# Your pull request should address only one issue.  If you have a batch of things, do separate pull requests.  Remember, they may be directed to different reviewers.
+# Don't feel bad if your patch is rejected.  It is not personal, they are just busy and want to get things correct for everyone.
+
+; Some Comfort
+: My first patches to the Linux kernel staging tree got kicked back multiple times until I got GKH's process right.  Once I learned the drill, all was well.  Greg is a great guy.
+
+=== Using Git Hooks ===
+In order to help in formatting commits and commit messages, git hooks can be used.
+Those hooks are scripts called back at various steps of the commit process. Those of interest are '''pre-commit''' and '''commit-msg'''. 
+
+The first one, pre-commit, will be used to force checkpatch.pl compliancy. If checkpatch.pl fails on the patch, then the commit won't be possible. The second one is managing SoB. If comitter forgot to add his SoB to the commit (calling git commit -s), and so the SoB is missing, the hook will automatically add the SoB to the message. 
+
+Source code of '''pre-commit''' is
+  #!/bin/bash
+  
+  if git rev-parse --verify HEAD 2>/dev/null >/dev/null
+  then
+          against=HEAD
+  else
+          # Initial commit: diff against an empty tree object
+          against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+  fi
+  
+  topdir=$(git rev-parse --show-toplevel)
+  exec git diff --cached  $against | $topdir/src/scripts/checkpatch.pl \
+                --no-signoff -q -
+
+Source code of '''commit-msg''' is
+  #!/bin/sh
+  #
+  SOB=$(git var GIT_AUTHOR_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
+  grep -qs "^$SOB" "$1" || echo "$SOB" >> "$1"
+
+In src/scripts/git_hooks, the script '''install_git_hooks.sh''' will install those hooks at the right place.
+This is a per repository setup, you'll have to do it on every clone of the ganesha repo that you are using. 
+
+For some good reasons, you may not want to run hooks. For example, you do a temporary commit for testing new code and do not care yet for checkpatch.pl compliancy. Running git with ''--no-verify'' (e.g. ''' git commit --no-verify -a -m "Tmp commit : do not push this to Jim"''') will disable hooks.
+
+=== Logical Flow and Bisecting ===
+This may be a new concept to developers who have grown up with more centralized source management.
+In those environments, the style gravitates toward large, aggregated changes.
+''Submits'' are a big deal involving lots of process and bug tracker activity.
+The result is often one massive commit at the end of the development/bugfix task.
+
+That behaviour is discouraged in a distributed, particularly a ''git'' environment.
+Merging from multiple developers happens all the time and massive "changesets" are difficult to digest.
+If problems are found later, it is difficult to do anything other than revert the whole thing.
+Therefore, we encourage small, digestible commits as described above.
+
+The first issue with a set of patches is that they should have a logical flow.
+This looks like the following:
+
+* The first commits adds a bit of new functionality.  So far, all it does is build correctly.
+* The next set of commits connect it to the rest of the code.
+* The enabling commits follow.  At this point, it is "turned on"
+
+Each of these commits really stands by itself.
+The first is harmless - it just builds.
+The following commits connect it to the rest of the code with the final commit finishing the job of integrating it in.
+Using this method makes review simple.
+There is a flow to the series where we see the new function, then we see it connected,
+followed by seeing it in use.  A commit series like this is also bisectable.
+
+The bisectable property of a series of commits is the antidote to the massive one-hit submit.
+Each commit stands by itself so we can break the series at any point and have something to test.
+If the series has a logical flow to it, as above, we can take the most efficient search path, a bisect,
+and start looking for the bug.  If we build at the middle point, test, and it works, we know that the
+first part of the series is "good".
+If we continue this process, eventually we get to a point where the bug appears and the commit is "bad".
+If we observed the small, one issue, simple rule, the bug is plain to see.
+There is even a ''git'' command tailored to this.
+
+== Maintainer Review ==
+The good news is the NFS Ganesha project is very active and growing.
+But what comes with growth is growing pains.  Putting together an update is a lot of work.
+The project is already to the point where few developers really know all of the code.
+This is where subsystem maintainers and code review come in.
+
+The [[Developers|Developer Area]] explains this further and contains a table of the current maintainers
+and the subsystems they are responsible for.
+This review process adds a step to the overall pull request workflow but it shouldn't add extra work to
+a developer's workday.
+Once a patch is accepted by the maintainer, it is mostly automatic from there.
+
+# You can send the pull request to either the mailing list or directly to the maintainer.  It would be faster if you sent it directly but some patches or pull requests need a wider audience for review.
+# The maintainer will review the patch and reply back to the submitter.  This may be multiple steps to get the patch in shape.
+# The maintainer will cherry pick the patch into his/her "next" branch (name not significant) with their SoB attached.
+# The maintainer will test their "next" tree before pushing for inclusion.  Broken patches return to the submitter.
+# There should be a "soak" period in which the aggregated commits in this branch get built and tested prior to being pushed upstream.  This also gives an opportunity for "re-do" before it gets further upstream.
+# The release manager will only accept pull requests from the maintainers for code in their subsystems.
+# These pulls will be merged into the "next" candidate and tested.  Any conflicts or breakage will be worked out with the maintainer.
+
+There are exceptions to this rule.  We don't want to discourage people from contributing.
+We also need to handle end user problems in a timely manner.  Production usage has production expectations.
+Our goal here is good review and solid testing.
+
+== Pushing to gerrit ==
+
+First, when creating a https://gerrithub.io account (first time sign-in), do NOT
+copy your ganesha repo unless you plan to receive changes from someone
+else.
+It makes NO sense to push changes to your own repo (except for the
+gatekeeper)
+
+
+Now you have an account, you want to push some patch for us to review to
+ffilz/nfs-ganesha - you need to start by adding a new remote.
+
+You have a list of targets (anonymous http, ssh, http) to add on the
+project page:
+https://review.gerrithub.io/#/admin/projects/ffilz/nfs-ganesha 
+
+If your network allows it, ssh is easier. http needs you to setup a
+generated password (settings page, "HTTP Password" menu on the left)
+Also make sure you use https (not http)
+
+so taking an example:
+ $ git clone ssh://USERNAMEHERE@review.gerrithub.io:29418/ffilz/nfs-ganesha
+ $ cd nfs-ganesha
+ nfs-ganesha$ git remote add gerrit ssh://USERNAMEHERE@review.gerrithub.io:29418/ffilz/nfs-ganesha
+ nfs-ganesha$ git fetch gerrit
+ nfs-ganesha$ ./src/scripts/git_hooks/install_git_hooks.sh
+ nfs-ganesha$ git log gerrit/next..HEAD
+ # this should ONLY list the commits you want to push!
+
+
+ nfs-ganesha$ git push gerrit HEAD:refs/for/next
+
+Alternatively
+ nfs-ganesha$ git review -t TOPIC-OR-BZ-HERE
+
+
+That's it. If you edit a commit, just push it again, gerrit will notice
+it has the same Change-Id and update your change with a new patch set.
+
+People involved with the review will get a mail (the list won't) and
+everyone will be happy in a better world!
+
+
+Please note that you can only push changes to another repo that you
+wrote, gerrithub will check the mail address you're using and ask you to
+add any different mail address to your profile (settings -> Contact
+information).
+Well, just read the text if you get an error, it's usually clear enough 
+
+=== Why RFC Pushes are Good ===
+Some new code ideas are simple, elegant and drop right in.
+Others are complicated, break a lot of things, or have a few false starts before they are complete.
+New features or changes that have impact across subsystems should start off
+as an RFC branch.
+
+There is no formal process for an RFC branch.
+Up to now, one just publishes a branch and announces it to the list.
+We discuss it in an email thread or chat about it on IRC.
+Once things settle down or if there are no objections, it becomes a normal pull request.
+
+=== The Sign Off ===
+The Patch Submission Guidelines call for sign-offs.
+The extra point to make here is that maintainer sign-offs make the merge and update process easier.
+Signed off patches have had more than just one developer looking at and testing it which increases
+the confidence that it will merge successfully and, more importantly, work.
+
+Anyone in the pipeline can add a sign-off.  The git tools will add your sign-off for you.
+You can also edit the commit and add yours or anyone else's sign-off.
+Often the reviewer will simply reply to your patch email with an 'ACK' rather than taking the
+patch into their own tree for later push upstream.
+This gives you permission to amend the commit to add their sign-off.
+However, it is more than bad form to add someone else's sign-off without getting their ACK first.
+
+=== Merges ===
+The end goal of a pull request is to get it merged somewhere upstream.
+This can be done by either a merge or cherry-pick, depending on the nature of the request.
+
+Single or small sets of commits should be cherry-picked.  There are two things added to
+the cherry-pick at this point.
+
+* Add your sign-off (the <code>-s</code> option) to indicate you accept it.
+* Maintain its provenance by using <code>-x</code> to indicate the original commit.
+
+Subsystem maintainers should use a cherry-pick for patches that they accept.
+This preserves the provenance and keeps the aggregated pull request cleaner.
+
+Release managers can use merges if they are fast-forward merges or cleanly rebase.
+If the merge is messy, it is probably best that it either be returned for cleanup or
+cherry-picked.
+
+There are no hard and fast rules other than work to maintain provenance and keep the
+series in a logical, consolidated stream.
+Bisect will be your friend later when that latent bug wakes up.
+
+== Reviews on Gerrit ==
+
+We all get mails on the list with a subject like: "Change in
+ffilz/nfs-ganesha[next]: <commit message>"
+
+That indicates someone pushed something to Frank's branch for review, if
+the commit message is something you feel you should review, please have
+a look at it.
+There will be a link like https://review.gerrithub.io/217448 which takes
+you to the patch set on gerrithub, where you can look at files, comment,
+etc.
+
+The reviewing interface can take some time getting used to, but in a few
+points, here's what I do:
+
+1/ Read the commit message in the top left corner to see what we're
+talking about
+
+2/ Pick what I want to compare with, if it's a new patch set there will
+only be base, but if it's a patch set I've already reviewed, it's good
+to compare with previous patch set.
+The only trick here is that if there's been a rebase between both patch
+sets, you will see in the diff changes coming from other commits that
+are completely unrelated and should use base again - in doubt, use base.
+
+3/ click on the *first* file in the file list. first is important, we'll
+go through everything.
+
+4/ read it, add comments, etc. When done with a file, hit ']' (right
+arrow up top) to go to next
+
+5/ When you're at the last file, do the same -- that'll take you back to
+top change. Here, you need to actually hit 'reply' (or 'review' in old
+interface) to publish your comments.
+Until this point, they're all drafts.
+(shortcut for 'reply' is 'a')
+
+That's it, you're done! Go look at another change, or whatever you'd like.
+
+
+A good page to bookmark would be:
+ https://review.gerrithub.io/#/dashboard/self
+
+This lists all changes you're involved with. Text will be in bold if
+someone else replied since your last visit.
+
+
+Another page I like is:
+ https://review.gerrithub.io/#/q/is:open+project:ffilz/nfs-ganesha
+
+This lists all the pending changes for frank's branch, that's where you
+want to look if you're looking at things to review without going back
+through our mails.
