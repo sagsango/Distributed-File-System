@@ -1,0 +1,27 @@
+= Version 1.5 =
+Version 1.5 is the current release.
+
+== Supported Protocols ==
+NFS Ganesha supports the following protocols and versions
+
+{|
+! align="left" | Protocol
+! align="right" | Version
+! align="center" | Transport
+! Details
+|-
+NFS || 2,3 || UDP/TCP || needs external rpc.bind
+|-
+MNT || 1,2 || UDP/TCP || client support only (no showmount)
+|-
+NFS || 4 || TCP || No pNFS
+|-
+NLM || 4 || UDP/TCP || integrated with V4.0 locks
+|-
+9P || 9P 2000 || TCP || Plan 9 v2000 remote access protocol
+|}
+
+== Supported Backends ==
+A FSAL (File System Access Layer) is the interface to a particular filesystem.
+This version of NFS Ganesha is limited to supporting one (compiled in) FSAL at
+a time.

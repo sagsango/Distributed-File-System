@@ -1,0 +1,37 @@
+= Setting Up NFS-Ganesha =
+
+== ID Mapping ==
+
+When using NFS-Ganesha with NFSv4.0+ or using Kerberos, ID Mapping needs to be setup. The full configuration of ID Mapper is beyond the scope of this documentation, there is a man page for idmapd.conf that may be of help. The important thing is that the same configuration must be used across all server and client hosts. The ways that ID Mapping comes into play are a result of how user and group ids are communicated.
+
+By default, in NFSv4.0+ any owner or group_owner attribute sent by the client (on file create or in a SETATTR call) or the server (READDIR and GETATTR) is in the form user@domain. There are options (which will be called out below) that can replace these strings with a simple numeric ID (formatted as a string since the attribute field is a string type). This is the most common source of problems. If the client and server do not agree on the setup, an owner or group_owner will be shown as "nobody," and in some cases, the actual owner of the file will be nobody, in other cases, it's just the client displaying it wrong.
+
+For Ganesha, there are two parameters in the NFSV4 configuration block:
+
+Allow_Numeric_Owners (defaults to true): With this set to true, Ganesha will accept numeric owner strings in addition to user@domain strings.
+
+Only_Numeric_Owners (defaults to false): With this set to true, Ganesha will send owner and group_owner as numeric strings.
+
+To use numeric IDs on the Linux client:
+
+Echo Y > /sys/module/nfs/parameters/nfs4_disable_idmapping
+
+It also looks like the Linux client may use numeric IDs if the mount is -osec=sys.
+
+== ClientID Issues ==
+
+Normally the Linux client uses hostname as the clientid long form. If this is not unique among clients, this will cause problems. There is a Linux client parameter that can be used to change this:
+
+/sys/module/nfs/parameters/nfs4_unique_id
+
+If this is an issue, seek out documentation on the Linux client to better understand this issue.
+
+== NFSv3 Locking ==
+
+NFSv3 Locking (aka NLM with support by NSM aka rpc.statd) has some name translation issues also. Lock clients are known by a "caller name" which is generally a host name. When NFS Ganesha tries to send a blocking lock grant message to the client, it will try to resolve this "caller name" into an IP address. Because host names are not always reliable or even exist in some environments, both NFS Ganesha and the Linux client have options to use the host IP address instead. These options SHOULD match.
+
+The NFS Ganesha option is NSM_Use_Caller_Name in the NFS_CORE_PARAM block. It defaults to false in which case IP addresses are used, otherwise the caller name sent by the client is used.
+
+On the Linux client, there is a parameter: /proc/sys/fs/nfs/nsm_use_hostnames which can be set to 1 or 0.
+
+Note that you will need to use NFS Ganesha V4.0+ for this to all work properly, though with earlier versions it may appear to work until there is a server or client reboot.

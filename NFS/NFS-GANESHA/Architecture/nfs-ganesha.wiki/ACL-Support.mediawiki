@@ -1,0 +1,63 @@
+NFS Ganesha supports ACLs with specific FSALs. From the client side, NFS Ganesha ONLY supports ACLs via the NFSv4 ACL attribute, it DOES NOT support the POSIX ACL side band protocol the kernel supports. On the back end (FSAL), NFS Ganesha supports NFSv4 or POSIX ACLs depending on the FSAL. The support matrix is:
+
+{|
+!FSAL
+!Type of ACL
+!Ganesha Verson
+|-
+|FSAL_CEPH
+|POSIX
+|V4.0+
+|-
+|FSAL_GLUSTER
+|POSIX
+|V2.1+
+|-
+|FSAL_GPFS
+|NFSv4
+|V1.5?+
+|-
+|FSAL_KVSFS
+|none
+|none
+|-
+|FSAL_LIZARDFS
+|NFSv4
+|V3.0+
+|-
+|FSAL_LUSTRE
+|none
+|none
+|-
+|FSAL_MEM
+|none
+|none
+|-
+|FSAL_PROXY_V3
+|none
+|none
+|-
+|FSAL_PROXY_V4
+|none
+|none
+|-
+|FSAL_PSEUDO
+|none
+|none
+|-
+|FSAL_RGW
+|none
+|none
+|-
+|FSAL_VFS
+|none (1)
+|none (1)
+|-
+|FSAL_XFS
+|none (1)
+|none (1)
+|}
+(1) FSAL_VFS/XFS can be compiled for in memory only NFSv4 ACLs for testing purposes.
+
+== POSIX ACL Support ==
+It is important to note here that since NFS Ganesha ONLY supports ACLs via NFSv4 on the client side, there is by necessity translation between NFSv4 and POSIX ACLs when the backend ACL is POSIX. This translation is imperfect. This wiki is not the place to document all the issues, but one document that describes some of the issues (albeit from the perspective of the Linux Kernel NFS Server) is: https://tools.ietf.org/id/draft-ietf-nfsv4-acl-mapping-03.txt

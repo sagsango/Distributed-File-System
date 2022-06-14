@@ -1,0 +1,41 @@
+= Documentation =
+These documentation links are separated by release because there have been significant
+changes to the server during the current development cycle.
+We do our best to keep things current but please note the release version so as to get
+the correct information for your installation.
+
+== Version 2.0 ==
+This version is in active development and is not considered stable enough for
+production use.  Its documentation is still incomplete.
+
+This development series has a number of significant improvements.
+
+* FSALs are now separate loadable modules and any number of them can be configured at runtime.
+
+* Full pNFS support with multiple FSALs is now possible.
+
+* The project has moved from Autotools to [http://www.cmake.org/Wiki/CMake Cmake] for its build system. This necessitates a completely [[BuildingV2|new build process]].
+
+* Server management and statistics gathering is now done via D-Bus.
+
+== Version 1.5 ==
+The following pages are valid for version 1.5.x and earlier.
+
+*[[Compiling| Compiling Compiling NFS-GANESHA]]
+*[[StatsSNMP| Getting NFS-GANESHA's stats via SNMP]]
+*[[Xattrd| Using Extended Attributes ghost directory]]
+*[[RPCSEC_GSS| Using RPCSEC_GSS with NFS-GANESHA]]
+*[[IPv6| Using IPv6 with NFS-GANESHA]]
+*[[Referral| Using NFSv4 referral in NFS-GANESHA]]
+*[[9p| Using 9P as a filesystem protocol]]
+
+Detailed documentation for exporting:
+*[[XFSLUSTRE| a XFS or LUSTRE filesystem]]
+*[[VFS| a VFS based filesystem]]
+*[[PROXY| another NFSv4 server (as a proxy server)]]
+*[[ZFS| the content of ZFS's pools]]
+*[[GLUSTER| a GLUSTER filesystem]]
+*[[GPFS| a GPFS filesystem]]
+
+Documentation in PDF Format
+*[http://nfs-ganesha.sourceforge.net/files/nfs-ganesha-ols2007.pdf Article about NFS-GANESHA from OLS2007]

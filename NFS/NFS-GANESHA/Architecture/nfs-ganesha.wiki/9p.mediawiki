@@ -1,0 +1,141 @@
+== Using 9P as a filesystem protocol in Ganesha ==
+
+Ganesha V2.0 has support for the 9p.2000L protocol.
+This protocol is available with any FSAL (and the related filesystem backend) you use.
+
+In this page, we will consider that FSAL_VFS is the one that you chose.
+
+=== Compiling with 9P support ===
+
+You just need to make sure that USE_9P is ON in Cmake's option
+For example (using FSAL_VFS);
+<pre>
+
+  # cmake -DUSE_9P=ON <path to ganesha source tree>
+  # make
+  # make install
+</pre>
+
+=== Configuring the Ganesha daemon === 
+
+For the moment, you can set the port used by the daemon to listen for 9P message (default is 564 aka 9pfs in /etc/services), the log destination and the log level for 9P related log information.
+
+In you ganesha's configuration file, if you want to change these parameters, you may use that syntax:
+<pre>
+  _9P 
+  {
+     _9P_Port = 564 ;
+     DebugLevel = NIV_FULL_DEBUG ;
+     # LogFile
+     #
+
+  }
+</pre>
+
+=== Tuning the client to use Ganesha as a 9P server === 
+
+You need a recent client (I had issue with 2.6.x kernels, but never had troubles with 3.x kernels). 
+Make sure you have these options set in you .config when you configure your kernels
+<pre>
+  CONFIG_NET_9P=m
+  # CONFIG_NET_9P_VIRTIO is not set
+  # CONFIG_NET_9P_RDMA is not set
+  # CONFIG_NET_9P_DEBUG is not set
+  CONFIG_9P_FS=m
+</pre>
+
+=== Mounting via 9P ===
+
+For the moment, Linux has no mount helper for 9P. This make the mount command line being quite complex.
+Imaginer you run the server on host whose IP addr is 192.168.10.2 and wants to export /home (you have set up such an entry in Ganesha's configuration file). Your local mount point is /mnt
+The client should then do this:
+<pre>
+  # mount -t 9p 192.168.10.2 /mnt -ouname=root,aname=/home,msize=65560,version=9p2000.L,debug=0x0,user=access
+</pre>
+
+You may set up an entry in /etc/fstab to make things easier
+<pre>
+  # grep 9p /etc/fstab
+  192.168.10.2       /mnt    9p      uname=root,aname=/tmp,msize=65560,version=9p2000.L,debug=0x0,user=access 0 0 
+</pre>
+
+=== Mounting via 9P in an easier way ===
+if you call "make rpm" a special rpm package whose name starts with "nfs-ganesha-mount-9P".
+It will install a help in /sbin/mount.9P. This way, if mount if called with "-t 9P" option, the mount process
+will be routed to this helper. The helper is written in bash and is really portable and will help you making 9P mounts in a "NFS-like" manner.
+
+Instead if the complicated command in the previous chapter, run
+<pre>
+  # mount -t 9P <server ip address or hostname>:/<path to export> <mount point>
+</pre>
+
+For example:
+<pre>
+  # mount -t 9P ganeshaserver:/home /mnt
+</pre>
+or
+<pre>
+  # mount -t 9P sauron:/this_is_my_ring /mount_doom
+</pre>
+
+the "-o" option can be used to pass option to the mount command. 
+For example, mount on 9p/RDMA can be done this way:
+<pre>
+  # mount -t 9P -o trans=rdma ganeshaserver:/home /mnt
+</pre>
+
+=== Running 9p test with Sigmund ===
+I make the asumption that Sigmund and related tests are installed and configured on the client (see Sigmund's wiki for details).
+
+You just need to do a 9P mount then run this (skipping longer tests):
+<pre>
+[root@saroumane ~]# /opt/sigmund/sigmund.sh 9p -q -s medium
+test1m :  ALLFS: copy file with 444 mode             [  OK  ]
+test1g :  ALLFS: traverse 700 dirs with altgroups    [  OK  ]
+test1w :  ALLFS: writes a 1GB file                   [ SKIP ]
+test2r :  ALLFS: rm -rf of wide namespace            [ SKIP ]
+test2s :  ALLFS: writes 5 bytes and check file size  [  OK  ]
+test3b :  ALLFS: cthon04's basic tests               [  OK  ]
+test3g :  ALLFS: cthon04's general tests             [  OK  ]
+test3s :  ALLFS: cthon04's special tests             [  OK  ]
+test3l :  ALLFS: cthon04's lock tests                [ SKIP ]
+test4g :  ALLFS: git clone a local repository        [ SKIP ]
+test4s :  ALLFS: Tar calls utimes on symlink         [  OK  ]
+test4k :  ALLFS: decompress kernel tar + compilation [ SKIP ]
+test21f : XATTR: simple xattr set/get : file         [  OK  ]
+test21d : XATTR: simple xattr set/get : directory    [  OK  ]
+test21s : XATTR: simple xattr set/get : symlink      [  OK  ]
+test22f : XATTR: xattr creation/deletion : file      [  OK  ]
+test22d : XATTR: xattr creation/deletion : directory [  OK  ]
+test22s : XATTR: xattr creation/deletion : symlink   [  OK  ]
+test23f : XATTR: mulitple sets + 1 check : file      [  OK  ]
+test23d : XATTR: mulitple sets + 1 check : directory [  OK  ]
+test23s : XATTR: mulitple sets + 1 check : symlink   [  OK  ]
+test24f : XATTR: Set a trusted.* xattr on a file     [FAILED]
+test25f : XATTR: Set a security.* xattr on a file    [FAILED]
+test41a : LTPFS: fsx-linux with no mmap                       [  OK  ]
+test41b : LTPFS: fsx-linux with mmap on write                 [  OK  ]
+test41c : LTPFS: fsx-linux with mmap on read                  [  OK  ]
+test41d : LTPFS: fsx-linux with mmap on read+write            [  OK  ]
+test42b : LTPFS: run bonnie++ with a reduced memory size      [ SKIP ]
+test43f : LTPFS: run fsstress on 30 procs                     [ SKIP ]
+test44f : LTPFS: run LTP's growfiles fast tests               [  OK  ]
+test44s : LTPFS: run LTP's growfiles slow tests               [ SKIP ]
+test45a : LTPFS: run LTP's chdir tests                        [  OK  ]
+test45b : LTPFS: run LTP's chmod tests                        [  OK  ]
+test45c : LTPFS: run LTP's chown tests                        [  OK  ]
+test45d : LTPFS: run LTP's chroot tests                       [  OK  ]
+test45e : LTPFS: run LTP's close tests                        [  OK  ]
+test45f : LTPFS: run LTP's creat tests                        [  OK  ]
+test31f : ACL: simple acl set/get : file         [  OK  ]
+test31d : ACL: simple acl set/get : directory    [  OK  ]
+test31s : ACL: simple acl set/get : symlink      [  OK  ]
+test32f : ACL: acl creation/deletion : file      [  OK  ]
+test32d : ACL: acl creation/deletion : directory [  OK  ]
+test32s : ACL: acl creation/deletion : symlink   [  OK  ]
+test33f : ACL: mulitple sets + 1 check : file      [  OK  ]
+test33d : ACL: mulitple sets + 1 check : directory [  OK  ]
+test33s : ACL: mulitple sets + 1 check : symlink   [  OK  ]
+2 tests FAILED, 36 successful, 8 skipped
+
+</pre>

@@ -1,0 +1,82 @@
+== Dependencies ==
+
+nfs-ganesha has a few dependencies.
+On a red-hat based linux distribution, this should be enough for most of it:
+
+ # Common things
+ yum install gcc git cmake autoconf libtool bison flex
+ # More nfs-ganesha specific
+ yum install libgssglue-devel openssl-devel nfs-utils-lib-devel doxygen redhat-lsb gcc-c++
+
+If you run into cmake problems get the source and compile it on your system:
+ $ sudo yum install cmake flex bison
+ $ wget http://www.cmake.org/files/v2.8/cmake-2.8.10.2.tar.gz
+ $ tar zxf cmake-2.8.10.2.tar.gz
+ $ cd cmake-2.8.10.2
+ $ ./configure --prefix=/usr/ && gmake && sudo gmake install
+
+== Compiling NFS-GANESHA with cmake (v2+) ==
+
+With cmake things are pretty straightforward:
+ mkdir build
+ cmake ../path/to/nfs-ganesha/src
+ # set options there, such as selecting which FSAL you want to enable.
+ # Alternatively, this can be done with cmake ../path/to/nfs-ganesha/src -DUSE_FSAL_XYZ=ON or OFF
+ make
+ make install
+
+Configuration files examples are provided in nfs-ganesha/src/config_samples
+
+== Compiling NFS-GANESHA with autotools (v1.x.y) == 
+Since version 1.0.1, there are different ways of compiling NFS-GANESHA
+
+
+=== Producing a statically linked daemon ===
+You have to specify a FSAL name when compiling. If none is provided, then FSAL/PROXY will be used. The name you can use are POSIX, SNMP, PROXY and FUSE
+Example: compiling NFS-GANESHA with FSAL/POSIX
+<pre>
+
+  # ./configure --with-fsal=POSIX
+  # make
+  # make install
+</pre>
+
+This way of compiling is the one used for all 0.99.xy releases.
+In the NFS-GANESHA packages, the binary whose names is similar to xfs.ganehsa.nfsd or posix.ganeshell are compiled this way.
+
+===Producing a dynamically linked daemon===
+Procedure is very similar as the one stated above, you just have to add option --enable-buildsharedfsal when using ./configure
+Example: compiling NFS-GANESHA with FSAL/XFS and dynamic FSAL
+<pre>
+  # ./configure --with-fsal=XFS --enable-buildsharedfsal
+  # make
+  # make install
+</pre>
+
+This will produce a dynamic FSAL library and a NFS-GANESHA daemon linked with this dynamic FSAL. This feature is available since release 1.0.1 . FSAL compiled as shared library are pretty useful when used with FSAL-less NFS_GANESHA daemon
+
+===Producing a FSAL-less daemon===
+This is available only with version 1.0.1 and later. This feature was not implemented all 0.99.xy versions.
+This method produces the NFS-GANESHA binary with no FSAL. The daemon looks in the configuration file for the location of a FSAL library and loads it at runtime using the dlopen() API. This way, you can produce a very generic NFS_GANESHA daemon that can be used to access various filesystems. You just need to have the related FSAL to be loaded.
+The compilation is done this way
+<pre>
+  # ./configure --with-fsal=DYNFSAL
+  # make
+  # make install
+</pre>
+
+You will produce binaries dynfsal.ganesha.nfsd and dynfsal.ganeshell. See document about the configuration of such binaries (in the documentation section of this website) for instructions on how to use this kind of daemon.
+
+== Compiling NFS-GANESHA on FreeBSD ==
+
+nfs-ganesha is available in FreeBSD ports starting from V2.7.
+
+<pre>
+  # cd /usr/ports/net/nfs-ganesha
+  # make
+  # make install
+</pre>
+
+Note that the following FSALs are currently supported out of the box: FSAL_VFS, FSAL_MEM.
+
+Support for other FSALs such as GlusterFS, CephFS require more recent ports.

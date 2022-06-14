@@ -1,0 +1,151 @@
+= NFS-Ganesha Developer Area =
+
+This is where to go for developer information. Learn how to build, test,
+and contribute to the project here.
+----
+
+= Development Cycle =
+The development cycle and its policies are found in [[DevPolicy|Development Policies]].
+
+= Commit Process =
+We use common ''git'' practices for our development.  We also take advantage
+of Github and Gerrithub web based tools to ease our process.
+
+This is an active project and we are feeling the growing pains of an expanding
+developer community.  The server is also being embedded in commercial products.
+As a result, our process is becoming more formal.
+
+# The submitter writes some new code or fix some old code...
+# Send a pull request to nfs-ganesha-devel@lists.sourceforge.net The mailing list.
+# The maintainer(s) for the particular subsystem reviews the change.
+## The maintainer works with the submitter to get a correct and appropriate change.
+## Once the change meets the maintainers approval, the maintainer cherry-picks the commit to their push list and adds their Sign-off-By.
+# The release manager pulls the accumulated changes and merges an update to the source tree.
+# The release manager pushes periodic updates to the master repository on Github.
+## Every update push has a named, annotated tag which contains a comment describing the total merge.
+## Both the branch and tag are pushed to the master repository.
+## An announcement containing the short log and annotation comment along with more detailed comments (as appropriate) is sent to the nfs-ganesha-devel@lists.sourceforge.net Mailing List
+# Rinse and Repeat.
+
+Consult [[DevPolicy|Development Policies]] for the details.
+
+== Subsystem Maintainers ==
+Subsystem maintainers are a key part of the process.  Their job is to provide
+review feedback to submitters, make the changes from multiple contributors all fit together,
+and to aggregate submissions into a coherent whole for clean merge into the tree.
+
+== Why Maintainers? ==
+A maintainer is not in the process to just get in the way or add overhead and
+this does not prevent submitters from requesting a pull directly to the release manager when
+a change is small, isolated, and obvious in its correctness.
+However, it is more likely that a pull request will make it into the tree if it first goes
+through the appropriate maintainer(s) simply because they are closer to what is going on in
+and around that subsystem.
+
+== Maintainer List ==
+
+The following table is the current list of subsystem maintainers.  These folks
+were picked because they have contributed to the project the most in these
+particular areas.  Their review and suggestions are important.
+
+{|
+! Subsystem
+! Maintainer
+! Email
+|-
+| MDCACHE
+| Daniel Gryniewicz
+| dang at redhat.com
+|-
+| CEPH FSAL
+| Frank Filz or Jeff Layton
+| ffilz at redhat.com or jlayton at redhat.com
+|-
+| DRC/TIRPC
+| Daniel Gryniewicz or Matt Benjamin
+| dang at redhat.com or mbenjamin at redhat.com
+|-
+| RGW FSAL
+| Matt Benjamin
+| mbenjamin at redhat.com
+|-
+| SAL/locks
+| Frank Filz
+| ffilz at redhat.com
+|-
+| VFS FSAL
+| Frank Filz
+| ffilz at redhat.com
+|-
+| V2.8.x and V3.x Stable Versions
+| Daniel Gryniewicz
+| dang at redhat.com
+|-
+| 9P protocol, LUSTRE FSAL, ZFS FSAL
+| Philippe Deniel
+| philippe.deniel at cea.fr
+|-
+| pNFS
+|-
+| GPFS FSAL
+| Yogendra 
+| yogendra858 at yahoo.com
+|-
+| GLUSTER FSAL
+| Kaleb Keithley
+| kkeithley at redhat.com
+|}
+
+The people in this table have been chosen based on their past contributions in those particular areas.  It is not a closed list.  We also and always need reviewers and backup maintainers.  Volunteers are encouraged.
+
+= Miscellaneous Details =
+Everything developer that does not fit a category all its own ends up here...
+
+== Phone Conferences's minutes ==
+A weekly phone conference takes place every Tuesday at 7:30AM Pacific Local time (15:30 UTC during the summer, 16:30 UTC during the winter). 
+
+Here are the call in details:
+
+* To join the Meeting: https://bluejeans.com/373354489/
+* To join via Browser: https://bluejeans.com/373354489/6397/browser
+* To join with Lync: https://bluejeans.com/373354489/6397/lync
+* To join via Phone:
+** Dial:
+*** +1 800 451 8679
+*** +1 212 729 5016
+*** (see all numbers - https://www.intercallonline.com/listNumbersByCode.action?confCode=5695731261)
+** Enter Conference ID: 5695731261
+
+Developers involved in the Ganesha community meet at this time and
+discuss about development's status and futures features.
+Minutes to these phone call can be found here.
+
+== Testing ==
+[[testing| tests, criteria, results, etc.]]
+
+== LTTng ==
+Using LTTng with Ganesha is fairly straight forward.  First, build with LTTng enabled by adding this to your cmake:
+ -DUSE_LTTNG=ON
+
+Next, you need to set up LTTng before running Ganesha.  LTTng aggregates tracepoints via a channel into a session.  For Ganesha, we only need a single channel within the session.  Set it up like this:
+ lttng create <sessionname>
+ lttng enable-channel -u --session=<sessionname> --subbuf=size="128k" channel0
+
+Optionally, if you want trace lines to include thread IDs, you can have LTTng add them:
+ lttng add-context -u -t pthread_id -v vtid
+
+Next, you need to enable events from Ganesha.  If no events are specifically enabled, then all events are enabled, so you only need this if you want a sub-set of events.  In Ganesha, all logging is converted to events, so having logging on can send a lot of events.  Events themselves are in src/include/gsh_lttng/* or in src/libntirpc/ntirpc/lttng/*.  Events are in the form "provider:event", with * as a wildcard.  So, "*:*" enables all events, "mdcache:*" enables all mdcache events, and "mdcache:mdc_lru_ref" enables the single event.
+ lttng enable-event --channel=channel0 -u mdcache:mdc_lru_ref
+ lttng enable-event --channel=channel0 -u mdcache:mdc_lru_unref
+
+Finally, you need to start lttng
+ lttng start
+
+Next, run Ganesha like normal, preloading the Ganesha LTTng library:
+ LD_PRELOAD=/path/to/libganesha_trace.so:/path/to/libntirpc_tracepoints.so ganesha.nfsd
+
+Do your workload.  When it's done, stop Ganesha.  The results of tracing are in binary format in ~/lttng-traces and are processed into text with babeltrace:
+
+ babeltrace ~/lttng-traces/<sessionname>-<timestamp> > trace.log
+
+You can then look at trace.log with whatever tool you want.

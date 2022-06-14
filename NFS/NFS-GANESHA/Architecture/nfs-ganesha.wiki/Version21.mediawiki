@@ -1,0 +1,119 @@
+= Version 2.1 =
+This page captures the details of the new features in Version 2.1.  For an overview of the release consult the [[ReleaseNotes_2.1|Version 2.1 Release Notes]].  The key features that affect the installation and configuration are:
+
+* Dynamic loading and unloading of exports.
+
+* Rewrite of the configuration file processing.
+
+* Re-implementation of the pseudo filesystem.
+
+* Extended alternate groups
+
+== Version 2.1 Feature Details ==
+The V2.1 release has been focused on getting a few key features that could not make it into the V2.0 cycle.
+
+=== Dynamic Loading and Unloading of Exports ===
+Previous versions of NFS-Ganesha required a restart of the server whenever the administrator had to modify the exports.  This version of the server now supports the adding and removing of exports.  Dynamic management of exports is via the DBus interface.  This section describes how to use the python based tools.  See the [Dbusinterface|DBus interface] for the protocol details.
+
+The system administrator can add or remove an export with the ''manage_exports'' command.
+
+==== Adding Exports ====
+To add an export, the administrator supplies two arguments to the command and sub-command.  The first argument is the path to a configuration file and the second is an expression that identifies which export in the file is to be added.
+
+<code>
+# manage_exports add /etc/ganesha/my_server.conf 'export(export_id = 14)'
+</code>
+
+The first argument can be any configuration file with the relevant ''EXPORT'' block in it.  Common practice would be to edit the main configuration file or a file it may include.  In this way, if the server must restart, it would come up with the new export included.  This is not a hard requirement however.  One could have some exports in separate files and control them with ''cron'' jobs.
+
+The second argument to the ''add'' command is a description of the export to add.  This example shows the addition of the export with the id of ''14''.  This expression is not limited to the export's id number.  Any export parameter that can uniquely identify the export can be used.  The most common of these would be ''export_id'', ''path'', or ''pseudo''.  See [[Dbusinterface|DBus interface]] for a more detailed explanation of the expression syntax.
+
+==== Removing Exports ====
+To remove an export, the administrator supplies the export's id to the subcommand.
+
+<code>
+# manage_exports remove 14
+</code>
+
+This example removes the export added in the previous example.
+
+; NOTE:
+: Modifying an export in place is not supported in this release.  In order to do the equivalent, reverse the order of these examples.  First remove the export and then add it using the modified configuration file.
+
+=== Configuration File Processing Rework ===
+The configuration file processing infrastructure has improved in many areas:
+
+* Better log message diagnostics.  Log messages now include the file name and line number so administators can more easily find problem areas in their configuration files.  Log messages are now more precise and consistent.  In other words, an error message about a parameter exceeding its range is the same for any case of out-of-range errors.
+
+* Consistent and complete parameter validation.  All parameters are described by structured tables which contain the type, minimum, maximum, and default values for the parameter. The common processing functions reference these tables in processing.  Every parameter is validated against these values.  In addition, additional parameter block inclusive validations are performed to validate the relationships among parameters.
+
+* These tables are structured so that the DBus services can use them for modifying parameters at runtime.  This capability will be completed in a future release.
+
+The motivation for this work was to make the managing of dynamic exports easier.  A new export can now be completely filled out and validated before it is installed. This is necessary because exports must be unique in order for lookups to be consistent.  This release only supports the addition of unique new exports.  A future release will extend this to the modification of an existing export.
+
+The details and discussion are [[V21ConfigParse|here]].
+
+==== Configuration Processing Changes ====
+The basic syntax of the configuration file remains the same as in earlier versions but a number of parameters have either been changed or removed entirely.  A number of individual parameters which served no purpose anymore were removed.  These are reported to the log as non-fatal events and ignored.  The system administrator should review the startup log and edit the configuration to remove these no longer useful messages.
+
+The new processor reports unknown parameters to the log in an ''event'' level message.  The administrator should examine the log closely for these messages after an upgrade to find and remove obsolete or miss-typed parameters.
+
+The top level '''FSAL''' block has been removed entirely.  This was originally meant to tell the server the location for the shared object that implements the named FSAL.  One undesireable side effect of this method was that all of the shared objects named in this block got loaded regardless of whether any of them would be used.  The new method automatically loads a fsal only if and when it is first encountered in an '''EXPORT''' block.
+
+; NOTE
+: There used to be a parameter to set the name of a FSAL.  This has been removed.  A FSAL name is hardwired into the code.  A hard wired, unique FSAL id number is also assigned in the source although there is no administrator or user visible feature that uses it.  These names are assigned when the FSAL source is added to the server.
+
+The following configuration file fragment illustrates the new management of FSALs.  The first fragment is for an export that uses the VFS FSAL.
+
+<pre>
+EXPORT {
+	Export_ID = 32;
+	Path = /home/test;
+	Pseudo = /test;
+	...
+	FSAL {
+		Name = VFS;
+		pnfs = true;
+	}
+	...
+}
+</pre>
+
+The ''Export_ID'', ''Path'', and ''Pseudo'' keywords and their values are typical of previous usage.  The addition is the '''FSAL''' sub-block.  This is similar to the V2.0 configuration but how it works has changed.  The FSAL itself is not loaded until it is encountered in an '''EXPORT''' block.  This means that only those FSALs that have export references will be loaded and all additional exports that use the FSAL will use the already loaded module.  The '''Name''' parameter identifies the FSAL as noted above and is consumed by the export processing.  This is all that is required to connect an export to a FSAL and to get it loaded in the server.
+
+The '''pnfs''' parameter is passed to the FSAL itself for processing.  In this case, the VFS FSAL can operate in both ''pnfs'' mode, i.e. it can offer layouts to clients, and non-pnfs mode e.g. simple exports of local filesystems.  These extra parameters are FSAL specific which makes the coding simpler and the configuration file sensible.
+
+There can also be a block for the initialization of the FSAL itself.  These block are named using the FSAL's name.  For example, the parameters in ''VFS { .. }'' contains the module initialization parameters for the VFS FSAL to be processed right after the module is loaded.  Most FSALs do not need this but the capability is there.  This is a behavior carried unchanged from V2.0.  The block is processed only once and done right after the FSAL is loaded by the first referencing export.
+
+===== Exports and Permissions =====
+Part of the dynamic exports feature set is a more correct and consistent management of sub-mounts and permissions.  Administrators can use these features to handle a number of complex file service requirements.
+
+* Exports properly handle sub-mounts.  For example, if the server exports ''/fs0'' as read-only and ''/fs0/some/path/fs1'' as read-write, the server will recognize the transition between the two filesystems and use the appropriate permissions.  It will also detect the crossing to a different filesystem.  In this case, if ''/fs0'' is Ext4 and ''/fs1'' is GPFS, the two mounts will use the appropriate FSAL.  This is also important if one is pNFS capable and the other is not.
+
+* Exports can be defined in any order.  The server sorts out everything out as above and applies the export options correctly.
+
+* Exports have '''CLIENT''' sub-blocks to apply fine grained permissions based on the client's identity.  These blocks are definition order dependent.  The first matching client identity match will be taken so the administrator should properly order these blocks in the export to get what she intends.
+
+See [[DBusExports|Managing Exports with DBus]] for more detail.
+
+==== Managing Exports via DBus ====
+The server installs all the exports it finds in its configuration file at startup.  An administrator would use one of the administration tools to add or remove an export in a running server.  This is a large topic that is covered in the [[DBusExports|Managing Exports with DBus]] guide.
+
+=== Pseudo Filesystem as a FSAL and Dynamic Exports ===
+The pseudo filesytem infrastructure has been completely re-written.  There are no administrator or user visible changes but the new structure makes dynamic exports possible.  The old infrastructure which was special case code is now replaced by an internal FSAL that manages an internal filesystem backend that is based on the ''pseudo'' and ''path'' parameters of exports.  The pseudo FSAL implicitly exports the following:
+
+<pre>
+EXPORT {
+	Export_ID = 1;
+	Pseudo = /;
+	Path = /;
+	Access_type = RO;
+}
+</pre>
+
+Export 1 with a path of "/" is treated as the pseudo filesystem.  One could use a local filesystem as persistent storage for a pseudo filesystem by defining it with an ID of 1 and a pseudo path of "/".  Nothing is really gained by this but it is possible given the implementation.
+
+=== Extended Alternate Groups ===
+The NFSv3 protocols made a number of assumptions and design choices that are no longer appropriate in modern, enterprise environments.  One of these is the way user credentials are passed from the client to the server.  One of these limitations is the size limitation of only 16 alternate groups in the credentials for a request.  Many enterprise environments require more than 16 groups.  See the [Configurationfile|configuration file page] for the administrative details.
+
+This is a per export option controlled by the boolean parameter ''Manage_gids''.  If this parameter is ''true'' for an export, the alternate groups from an AUTH_SYS request credential are replaced by the alternate groups supplied by the server system.  This removes the 16 group limit imposed by AUTH_SYS.

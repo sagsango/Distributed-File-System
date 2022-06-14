@@ -1,0 +1,5 @@
+NFS3.txt : Completed 
+
+
+Doubt:
+  "Weak cahe consistency"

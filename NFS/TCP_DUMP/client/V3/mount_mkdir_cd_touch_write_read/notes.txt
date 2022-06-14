@@ -1,0 +1,1 @@
+06_read_file.txt : we use here vim instead of cat, so it is not really a read

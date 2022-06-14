@@ -1,0 +1,97 @@
+Welcome to NFS-Ganesha Wiki
+----
+Nfs-ganesha is a user-mode file server for NFS v3, 4.0, 4.1, and 4.2; and for 9P from the Plan9 operating system. It can support all these protocols concurrently. 
+
+This is an Open Source project with an active community of both company sponsored and independent developers.
+This Wiki is the primary location for all current information about the project and its software releases.
+
+== pNFS ==
+NFS-Ganesha has support infrastructure for pNFS but efforts in this area have not been active for many years and pNFS is not currently supported by the active community.
+
+== Release Status ==
+Releases occur more often than updates to this section. To get the most up to date release information, browse the NFS-Ganesha GitHub [[Releases|https://github.com/nfs-ganesha/nfs-ganesha/releases]] history.
+
+Version 4 is the latest release. [[ReleaseNotes_4|Release Notes]] 
+
+The current 3 release is [[3.5|https://github.com/nfs-ganesha/nfs-ganesha/releases/tag/V3.5]]. Read [[3.5|https://github.com/nfs-ganesha/nfs-ganesha/releases/tag/V3.5]] for additional 3 details.  
+
+The current 2.8 release is [[2.8.4|https://github.com/nfs-ganesha/nfs-ganesha/releases/tag/V2.8.4]]. Read [[2.8.3|https://github.com/nfs-ganesha/nfs-ganesha/releases/tag/V2.8.4]] for additional 2.8 details.  
+
+The last 2.7 release is [[2.7.6|https://github.com/nfs-ganesha/nfs-ganesha/releases/tag/V2.7.6]]. Users of this and earlier releases are encouraged to upgrade as we are unable to devote resources to fix issues with these releases. 
+
+The last 2.6 release is [[2.6.3|https://github.com/nfs-ganesha/nfs-ganesha/releases/tag/V2.6.3]]. 
+
+The last 2.5 release is [[2.5.5|https://github.com/nfs-ganesha/nfs-ganesha/releases/tag/V2.5.5]]. 
+
+The last 2.4 release is [[2.4.5|https://github.com/nfs-ganesha/nfs-ganesha/releases/tag/V2.4.5]]. 
+
+The last 2.3 release was [[2.3.3|https://github.com/nfs-ganesha/nfs-ganesha/releases/tag/V2.3.3]]. 
+
+The last 2.2 release was [[Version22|Version 2.2]].  This is a significant update that supports delegations.  It also improves stability and protocol correctness.  See the [[ReleaseNotes_2.2|Release Notes]] for details. 
+
+Our previous releases are [[Version21|Version 2.1]], [[Version20|Version 2.0]] and [[Version15|Version 1.5]]. 
+
+== Source Code Availability ==
+Our supported releases since 2.3 are available as source code tarball downloads provided via the Release Status history URL above. Git provides access to the most recent development or (if you select) stable branches at [[Github nfs-ganesha|https://github.com/nfs-ganesha/nfs-ganesha.git]].
+
+See the [[Downloads|Download Page]] for details.  Official tarballs are also available by clicking through the ''Releases'' button on the repository's top page.
+
+We (obviously) use ''git'' for our source management.
+Our official development tree is maintained at [[Github nfs-ganesha|https://github.com/nfs-ganesha/nfs-ganesha.git]].
+Individual developers have their own git repositories, most of them on Github, for publishing their changes to the community.
+See the [[Developers|Developer Area]] for details.  The [[ReleaseNotes_2.0|Release Notes]] describe source availability in
+greater detail.  In particular, all our releases going forward are marked by signed tags.
+
+; NOTE:
+: The sidebar on the repository's home page gives you the choice of an HTTPS or SSH for cloning.  We use ''git submodules'' which will not work with an HTTPS clone.  Use: <code>git clone git://github.com/nfs-ganesha/nfs-ganesha.git</code> instead for anonymous clones.
+
+== Development Policies ==
+As our user base and development community have expanded, we have had to put some order to how we develop, release, and support our work.
+Our [[DevPolicy|Development Policies]] page describes how we go about our business, developing Open Source software.
+
+== Documentation ==
+
+Documentation from the "next" branch: https://github.com/nfs-ganesha/nfs-ganesha/tree/next/src/doc/man
+
+From V3-stable: https://github.com/nfs-ganesha/nfs-ganesha/tree/V3-stable/src/doc/man
+
+Some documentation on setting up NFS-Ganesha: [[Setup]]
+
+== Developer Documentation ==
+
+Compiling: https://github.com/nfs-ganesha/nfs-ganesha/blob/next/src/COMPILING_HOWTO.txt
+
+Contributing: https://github.com/nfs-ganesha/nfs-ganesha/blob/next/src/CONTRIBUTING_HOWTO.txt
+
+Some notes on coding style: https://github.com/nfs-ganesha/nfs-ganesha/blob/next/src/doc/coding_style/doxygen.txt
+
+Note that we follow many of the Linux Kernel style requirements, using checkpatch.pl to verify style. Patch submissions are generally expected to conform to the style. There are a few places we make exceptions. Continuous Integration will run checkpatch.pl on your submissions and they will be reported. Any exceptions will be noted during code review, otherwise we expect these errors and warnings to be cleaned up.
+
+Install git hook to run checkpatch.pl: https://github.com/nfs-ganesha/nfs-ganesha/blob/next/src/scripts/git_hooks/install_git_hooks.sh 
+
+The checkpatch.pl script: https://github.com/nfs-ganesha/nfs-ganesha/blob/next/src/scripts/checkpatch.pl
+
+== Contacting Us ==
+The community maintains an active, open IRC channel on [https://libera.chat Libera #ganesha].  Most of
+our developers keep in touch on this channel.
+
+We also maintain an email list on [https://lists.nfs-ganesha.org/archives/list/devel@lists.nfs-ganesha.org/].  Release
+announcements, technical discussions, and user questions are handled here.
+
+We have a weekly 30 minute video conference call on Tuesdays at 7:00 AM PST/PDT on Google Meet:
+  https://meet.google.com/mkh-ctnj-tqz
+  phone (US) +1 401-702-0462 (PIN: 495972631)
+  other phone numbers at https://meet.google.com/mkh-ctnj-tqz
+
+== Other Useful Links ==
+*[https://lists.nfs-ganesha.org/archives/list/devel@lists.nfs-ganesha.org/ NFS-Ganesha devel mailing list]
+*[https://lists.nfs-ganesha.org/archives/list/support@lists.nfs-ganesha.org/ NFS-GANESHA's support mailing-list]
+*[[Network File System (NFS) version 4 Protocol|https://www.ietf.org/rfc/rfc3530.txt]]
+*[[Network File System (NFS) Version 4 Minor Version 1 Protocol|https://www.ietf.org/rfc/rfc5661.txt]]
+*[[Network File System (NFS) Version 4 Minor Version 2 Protocol|https://www.rfc-editor.org/rfc/rfc7862.txt]]
+
+These links are approaching obsolete but may be of interest.
+
+*[http://sourceforge.net/projects/nfs-ganesha Sourceforge project's page]
+*[https://www.linux.com/news/run-your-nfs-server-user-address-space-nfs-ganesha/ Article about NFS-GANESHA on linux.com]
+*[http://nfs-ganesha.git.sourceforge.net/ NFS-GANESHA GitWeb (hosted by SourceForge)]
